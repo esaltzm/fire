@@ -54,9 +54,6 @@ def closest_node(node, nodes):
 
 # Creating border of Colorado
 
-img = plt.imread("map-colorado (1).jpg")
-fig, ax = plt.subplots()
-#ax.imshow(img, extent=[-109.05, -102.05, 37, 41])
 colorado = [(-102.05, 37), (-102.05, 41), (-109.05, 41), (-109.05, 37)]
 co = Polygon(colorado)
 x,y = co.exterior.xy
