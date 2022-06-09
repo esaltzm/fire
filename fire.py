@@ -12,6 +12,18 @@ from flask import Flask, request, redirect
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 
+app = Flask(__name__)
+if(os.environ['mode'] == "dev"):
+    DEBUG = True
+    DEVELOPMENT = True
+    LISTEN_ADDRESS = "127.0.0.1"
+    LISTEN_PORT = 5000
+else:
+    DEBUG = False
+    TESTING = False
+    LISTEN_ADDRESS = "209.94.59.175"
+    LISTEN_PORT = 5000
+
 #distance formula
 
 def getdistance(lat1, lon1, lat2, lon2):
@@ -334,7 +346,7 @@ plt.savefig("fire.png", dpi = 200)
 
 
 
-app = Flask(__name__)
+#app = Flask(__name__)
 @app.route("/sms", methods=['POST'])
 
 def sms_reply():
@@ -347,7 +359,7 @@ def sms_reply():
     return str(resp)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
 
 # TODO:
