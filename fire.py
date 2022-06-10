@@ -197,14 +197,18 @@ text += "\n"
 # Add fire names and areas to text
 
 for fire in cofires:
-    #print(fire['attributes']['irwin_IncidentName'],' - acres:', fire['attributes']['poly_GISAcres'])
     text += str(fire['attributes']['irwin_IncidentName'])
     text += ' Fire - '
     if fire['attributes']['poly_GISAcres'] is not None:
         text += str(round(fire['attributes']['poly_GISAcres']))
     else:
         text += "N.A."
-    text += " acres\n"
+    text += " acres, contaiment: "
+    if fire['attributes']['irwin_PercentContained'] is not None:
+        text += str(round(fire['attributes']['irwin_PercentContained']))
+        text += "%\n"
+    else:
+        text += "N.A.\n"
 
 # Make fires list which contains shapely shapes of each fire
 
@@ -326,18 +330,13 @@ for i in range(len(closestpoints)):
 
 # Send SMS update with Twilio
 
-account_sid = "ACf8c276acb53197b719e5b9e07d89991d"
-auth_token  = "8be95e1fd81a365058c4e084b86c00c0"
+# account_sid = "ACf8c276acb53197b719e5b9e07d89991d"
+# auth_token  = "8be95e1fd81a365058c4e084b86c00c0"
 
-client = Client(account_sid, auth_token)
-
-#message = client.messages.create(
-    #to = "+16178169771", 
-    #from_ = "+19378575936",
-    #body = text)
+# client = Client(account_sid, auth_token)
 
 print("number of characters:", len(text))
-print("\n*** SMS CONTENTS ***\n",text)
+print(text)
 #print(message.sid)
 
 # Save visuals
