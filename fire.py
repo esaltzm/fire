@@ -1,4 +1,5 @@
 import requests
+import threading
 import shapely
 import math
 import matplotlib.pyplot as plt
@@ -24,7 +25,18 @@ else:
     LISTEN_ADDRESS = "209.94.59.175"
     LISTEN_PORT = 5000
 
-#distance formula
+#
+
+def callAPI():
+    threading.Timer(3600, callAPI).start()
+    api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+    response = requests.get(api_url)
+    all = response.json()
+    fires = all['features']
+    print('checked api')
+    return fires
+
+# distance formula
 
 def getdistance(lat1, lon1, lat2, lon2):
 
@@ -138,12 +150,9 @@ for i in range(1,len(cwcoords)):
 
 text = ""
 
-# Accessing fire boundary data from Wildland Fire Interagency Geospatial Services API
+# Accessing fire boundary data from Wildland Fire Interagency Geospatial Services API every 1 hours
 
-api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
-response = requests.get(api_url)
-all = response.json()
-fires = all['features']
+fires = callAPI()
 
 # Accessing CO county geometry data
 
@@ -153,13 +162,6 @@ fires = all['features']
 # counties = all['features']
 # #county name = counties[i]['attributes']['LABEL']
 # #county coords = counties[i]['geometry']['rings'][0]
-
-# Accessing historical wildfire data over 100,000 acres (to test tool with large fires that may cross trail)
-
-# api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Historic_Geomac_Perimeters_Combined_2000_2018/FeatureServer/0/query?where=state%20%3D%20%27CO%27&outFields=*&outSR=4326&f=json"
-# response = requests.get(api_url)
-# all = response.json()
-# histfires = all['features']
 
 # Check if fires are in CO, add fire info (name)
 
