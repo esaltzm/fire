@@ -8,6 +8,8 @@ The app does not request specific location data from the user, but gives an upda
 <br/><br/>
 
 ![image showing the colorado trail with 2 nearby fires](https://i.imgur.com/dk1ppe5.png)
+<br/>
 ![image showing sms update](https://i.imgur.com/acwUpbV.jpg)
+<br/>
 ![image showing sms update](https://i.imgur.com/OcPFsgf.jpg)
 
