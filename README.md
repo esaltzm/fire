@@ -1,7 +1,13 @@
 # Wildfire Data Analysis with Python
 
-This project was inspired by a close call with a wildfire while thru-hiking the PCT in 2021. It queries fire location data from the National Interagency Fire Center web API and parses the coordinates in relation to gps data of a hiking trail (in this case the Colorado Trail but with potential adaptations for other National Scenic Trails).\
-Data can be received as an SMS message either with a cell phone or off-grid satellite communication device. This project will be expanded to a mobile-friendly website so hikers can check nearby fires when they have cell service, or request updates via satellite when they are without service.\
-![](fire.png)\
-(image showing closest points on trail to two active wildfires)
+This project was inspired by a close call with a wildfire while hiking the PCT in 2021. It requests fire location data from the National Interagency Fire Center and plots it against gps data of a hiking trail (in this case the Colorado Trail but with potential adaptations for other National Scenic Trails).
+<br/>
+Data can be received as an SMS message either with a cell phone or off-grid satellite communication device, so that even when a hiker is not being reached by a SMS emergency alert because they are out of service, they can still request an update through this app. 
+<br/>
+The app does not request specific location data from the user, but gives an update for the whole trail, from which the user can assess relevant information based on their location. Future implementations for longer trails may request a mile marker in the message body and use that to tailor location-specific updates, such as any active fires within 100 trail miles.
+<br/>
+
+![image showing the colorado trail with 2 nearby fires](https://i.imgur.com/dk1ppe5.png)
+![image showing sms update](https://i.imgur.com/acwUpbV.jpg)
+![image showing sms update](https://i.imgur.com/OcPFsgf.jpg)
 

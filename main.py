@@ -1,17 +1,13 @@
 import requests
 import threading
-import shapely
 import math
 import matplotlib.pyplot as plt
-import numpy as np
-from shapely.geometry import Point, LineString, Polygon, MultiPoint
-from shapely.ops import nearest_points
+from shapely.geometry import LineString, Polygon
 from math import radians, cos, sin, asin, sqrt
 
 import os
-from flask import Flask, request, redirect
+from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from twilio.rest import Client
 
 app = Flask(__name__)
 if(os.environ['mode'] == "dev"):
@@ -155,15 +151,6 @@ def main():
     # Accessing fire boundary data from Wildland Fire Interagency Geospatial Services API every 1 hours
 
     fires = callAPI()
-
-    # Accessing CO county geometry data
-
-    # api_url = "https://www.cohealthmaps.dphe.state.co.us/arcgis/rest/services/OPEN_DATA/cdphe_geographic_analysis_boundaries/MapServer/5/query?where=1%3D1&outFields=*&outSR=4326&f=json"
-    # response = requests.get(api_url)
-    # all = response.json()
-    # counties = all['features']
-    # #county name = counties[i]['attributes']['LABEL']
-    # #county coords = counties[i]['geometry']['rings'][0]
 
     # Check if fires are in CO, add fire info (name)
 
@@ -335,19 +322,13 @@ print(text)
 @app.route("/sms", methods=['POST'])
 
 def sms_reply():
-    number = request.form['From']
-    message_body = request.form['Body']
-    # Do stuff to get response_String
-    response = text
     resp = MessagingResponse()
-    resp.message(response)
+    resp.message(text)
     return str(resp)
 
 if __name__ == "__main__":
     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
-
 # TODO:
 # add evacuation orders for counties crossed by CT (check if any resupply towns are in other counties)
 # ADD PERCENT CONTAINMENT
-# 
