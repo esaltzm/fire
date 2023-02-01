@@ -7,9 +7,9 @@ Data can be received as an SMS message either with a cell phone or off-grid sate
 The app does not request specific location data from the user, but gives an update for the whole trail, from which the user can assess relevant information based on their location. Future implementations for longer trails may request a mile marker in the message body and use that to tailor location-specific updates, such as any active fires within 100 trail miles.
 <br/><br/>
 
-<img src='https://i.imgur.com/dk1ppe5.png' alt='image showing the colorado trail with 2 nearby fires'/>
+![image showing ct with 2 fires](https://i.imgur.com/76a82iF.jpg)
 <br/>
-![image showing sms update](https://i.imgur.com/acwUpbV.jpg)
-<br/>
-![image showing sms update](https://i.imgur.com/OcPFsgf.jpg)
-
+<div style='display: flex; gap: 30px;'>
+  <img src='https://i.imgur.com/acwUpbV.jpg' alt='image showing sms update' style='width: 400px'/>
+  <img src='https://i.imgur.com/OcPFsgf.jpg' alt='image showing sms update' style='width: 400px'/>
+</div>
