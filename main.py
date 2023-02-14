@@ -72,7 +72,7 @@ def closest_node(node, nodes):
 # Retrieve state border data as a Shapely object
 
 def get_borders(state):
-    borders = gpd.read_file('./state_outlines/tl_2022_us_state')
+    borders = gpd.read_file('tl_2022_us_state.shp')
     borders = borders.to_crs(epsg=4326)
     borders = borders[['NAME', 'geometry']]
     borders = borders.set_index('NAME')
