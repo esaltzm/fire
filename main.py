@@ -1,8 +1,9 @@
 import requests
 import threading
-import math
+import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Polygon, Multipolygon, Point
+import geopandas as gpd
 from math import radians, cos, sin, asin, sqrt
 
 import os
@@ -10,7 +11,7 @@ from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
-if(os.environ['mode'] == "dev"):
+if os.environ.get('mode') == "dev":
     DEBUG = True
     DEVELOPMENT = True
     LISTEN_ADDRESS = "127.0.0.1"
@@ -20,8 +21,6 @@ else:
     TESTING = False
     LISTEN_ADDRESS = "209.94.59.175"
     LISTEN_PORT = 5000
-
-#
 
 def callAPI():
     api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
@@ -70,156 +69,89 @@ def closest_node(node, nodes):
     dist_2 = np.einsum('ij,ij->i', deltas, deltas)
     return np.argmin(dist_2)
 
-# Creating border of Colorado
+# Retrieve state border data as a Shapely object
 
-colorado = [(-102.05, 37), (-102.05, 41), (-109.05, 41), (-109.05, 37)]
-co = Polygon(colorado)
-x,y = co.exterior.xy
-#plt.plot(x,y)
+def get_borders(state):
+    borders = gpd.read_file('./state_outlines/tl_2022_us_state')
+    borders = borders.to_crs(epsg=4326)
+    borders = borders[['NAME', 'geometry']]
+    borders = borders.set_index('NAME')
+    return borders.loc[state]
 
-# Reading and creating line from Colorado Trail gpx file
+# Retrieve trail data as Shapely linestring
 
-ctgpx = open('ct.txt' , 'r')
-line = ctgpx.readline()
-ctcoords = [(39.490350000, -105.095165000)]
-count = 0
-while line:
-    coords = line.split("\t")
-    if(len(coords) == 5):
-        del coords[0:2]
-        del coords[2]
-        latlong = []
-        for coord in coords:
-            latlong.append(float(coord))
-        ctcoords.append(tuple(latlong))
-        count += 1
-    line = ctgpx.readline()
-ctgpx.close()
-ct = LineString(ctcoords)
-x,y = ct.xy
-
-plt.plot(y,x, color = 'darkblue')
-
-# Reading and creating line from Collegiate West gpx file
-
-cwgpx = open('collegiatewest.txt' , 'r')
-line = cwgpx.readline()
-cwcoords = []
-count = 0
-while line:
-    coords = line.split("\t")
-    if(len(coords) == 7):
-        del coords[0:2]
-        del coords[2:6]
-        latlong = []
-        for coord in coords:
-            latlong.append(float(coord))
-        cwcoords.append(tuple(latlong))
-        count += 1
-    line = cwgpx.readline()
-cwgpx.close()
-cw = LineString(cwcoords)
-x,y = cw.xy
-plt.plot(y,x, color = 'blue')
+def get_trail_linestring(trail):
+    gpx = open(trail , 'r')
+    line = gpx.readline()
+    coords = []
+    while line:
+        coords = line.split("\t")
+        if(len(coords) == 5):
+            del coords[0:2]
+            del coords[2]
+            latlong = []
+            for coord in coords:
+                latlong.append(float(coord))
+            coords.append(tuple(latlong))
+        line = gpx.readline()
+    gpx.close()
+    return LineString(coords)
 
 # Create mile markers for each point in CT, dictionary[coordinate pair] = mile marker
 
-milemarkers = {}
-distance = 0
-for i in range(1,len(ctcoords)):
-    d = getdistance(ctcoords[i-1][0],ctcoords[i-1][1],ctcoords[i][0],ctcoords[i][1])
-    milemarkers[ctcoords[i]] = distance + d
-    distance += d
+def get_mile_markers(linestring):
+    milemarkers = {}
+    distance = 0
+    coords = list(linestring.coords)
+    for i in range(1, len(coords)):
+        current_distance = getdistance(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1])
+        milemarkers[coords[i]] = distance + current_distance
+        distance += current_distance
+    return milemarkers
 
-# Create mile markers for each point of Collegiate West
+def in_state(coord, state_border_polygons):
+    p = Point(coord[1], coord[0])
+    return any(state.contains(p) for state in state_border_polygons)
 
-cwmilemarkers = {}
-distance = 0
-for i in range(1,len(cwcoords)):
-    d = getdistance(cwcoords[i-1][0],cwcoords[i-1][1],cwcoords[i][0],cwcoords[i][1])
-    cwmilemarkers[cwcoords[i]] = distance + d
-    distance += d
 
-def main():
-
-    threading.Timer(3600, main).start()
-
-    # Initialize text to be sent as SMS
-
-    text = ""
-
-    # Accessing fire boundary data from Wildland Fire Interagency Geospatial Services API every 1 hours
-
+def get_current_fires(state_border_polygons):
     fires = callAPI()
-
-    # Check if fires are in CO, add fire info (name)
-
-    cofires = []
-    cofireshapes = []
+    current_fires = {
+        "fires": [],
+        "fire_shapes": []
+    }
     for fire in fires:
-        inco = False
+        in_state = False
         listofcoords = []
         for key in fire:
             coords = fire['geometry']['rings']
             for coordlist in coords:
                 for coord in coordlist:
-                    if(coord[1] > 37 and coord[1] < 41 and coord[0] > -109.05 and coord[0] < -102.05):
+                    if(in_state(coord, state_border_polygons)):
                         listofcoords.append(coord)
-                        inco = True
-        if(inco == True):
-            cofires.append(fire)
-            cofireshapes.append(listofcoords)
+                        in_state = True
+        if in_state == True:
+            current_fires["fires"].append(fire)
+            current_fires["fire_shapes"].append(Polygon(listofcoords))
+    return current_fires
 
-    # Add number of fires to text
-
-    text += "Total CO Fires: "
-    text += str(len(cofires))
-    text += "\n"
-
-    # Add fire names and areas to text
-
-    for fire in cofires:
-        text += str(fire['attributes']['irwin_IncidentName'])
-        text += ' Fire - '
-        if fire['attributes']['poly_GISAcres'] is not None:
-            text += str(round(fire['attributes']['poly_GISAcres']))
-        else:
-            text += "N.A."
-        text += " acres, contaiment: "
-        if fire['attributes']['irwin_PercentContained'] is not None:
-            text += str(round(fire['attributes']['irwin_PercentContained']))
-            text += "%\n"
-        else:
-            text += "N.A.\n"
-
-    # Make fires list which contains shapely shapes of each fire
-
-    for shape in cofireshapes:
-        poly = Polygon(shape)
-        x,y = poly.exterior.xy
-        plt.plot(x,y, color = "crimson")
-
-    # Check if any fires cross the trail
-
-    ctlist = list(ct.coords)
-    for i in range(len(ctlist)):
-        item = list(ctlist[i])
+def switch_xy(linestring):
+    coordlist = list(linestring.coords)
+    for i in range(len(coordlist)):
+        item = list(coordlist[i])
         temp = item[0]
         item[0] = item[1]
         item[1] = temp
-        ctlist[i] = tuple(item)
+        coordlist[i] = tuple(item)
+    return LineString(coordlist)
 
-    ctline = LineString(ctlist)
+def get_fires_crossing_trail(trail_linestring, current_fires):
+    reversed_linestring = switch_xy(trail_linestring)
     cross = False
     ncross = 0
-    for i in range(len(cofireshapes)):
-        if(ctline.intersects(Polygon(cofireshapes[i]))):
-            cross = True
-            ncross += 1
-            crossline = ctline.intersection(Polygon(cofireshapes[i]))
-            x,y = crossline.xy
-            plt.plot(x,y, color = 'yellow')
-            crosslist = list(crossline.coords)
+    for fire_shape in current_fires["fire_shapes"]:
+        if trail_linestring.intersects(fire_shape):
+            cross_points = list(trail_linestring.intersection(fire_shape).coords)
             start = crosslist[0]
             end = crosslist[len(crosslist)-1]
             startlist = list(start)
@@ -244,6 +176,55 @@ def main():
             text += "\n"
             del cofireshapes[i]
             del cofires[i]
+
+# trail_list object specifies list of states for each trail + location of trail data
+
+trail_list = {
+    "CT": {
+        "states": ["Colorado"],
+        "data": "ct.txt"
+    },
+    "PCT": {
+        "states": ["California", "Oregon", "Washington"],
+        "data": None
+    },
+    "CDT": {
+        "states": ["New Mexico", "Colorado", "Wyoming", "Idaho", "Montana"],
+        "data": None
+    },
+    "PNT": {
+        "states": ["Montana", "Idaho", "Washington"],
+        "data": None
+    }
+}
+
+class FireTracker():
+    def __init__(self, trail):
+        self.text = ""
+        self.trail = trail
+        self.trail_linestring = get_trail_linestring(trail)
+        self.trail_mile_markers = get_mile_markers(self.trail_linestring)
+        self.states = trail_list[trail]
+        self.state_border_polygons = list(map(get_borders, self.states))
+        self.current_fires = get_current_fires(self.state_border_polygons)
+    def create_SMS(self):
+        self.text += f"Total fires in {', '.join(self.states)}: {self.current_fires}\n"
+        for fire in self.current_fires:
+            self.text += f"{str(fire['attributes']['irwin_IncidentName'])} Fire"
+            area = round(fire['attributes']['poly_GISAcres'])
+            containment = round(fire['attributes']['irwin_PercentContained'])
+            if area or containment: self.text += ' - '
+            if area:
+                self.text += str(area) + " acres"
+                if containment: self.text += ", "
+            if containment:
+                text += str(containment) + "%% contained"
+
+def main():
+
+    threading.Timer(3600, main).start()
+
+    # Check if any fires cross the trail
 
 
     if cross == False:
@@ -329,6 +310,3 @@ def sms_reply():
 if __name__ == "__main__":
     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
-# TODO:
-# add evacuation orders for counties crossed by CT (check if any resupply towns are in other counties)
-# ADD PERCENT CONTAINMENT
