@@ -292,3 +292,7 @@ def sms_reply():
 if __name__ == "__main__":
     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
+# TO DO :
+# refactor
+# create test fire data to check refactoring
+# assemble trail data 
