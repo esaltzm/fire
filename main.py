@@ -152,6 +152,28 @@ def get_fires_crossing_trail(trail_linestring, current_fires):
         if trail_linestring.intersects(fire["shape"]):
             fires_crossing_trail.append(fire)
     return fires_crossing_trail
+
+def get_closest_points(trail_linestring, current_fires):
+    closest_points = []
+    coords = list(trail_linestring.coords)
+    for fire in current_fires:
+        fire_shape = fire["shape"]
+        distancebetween = []
+        for i in range(len(fire_shape)-1):
+            distancebetween.append(getdistance(fire_shape[i][0],fire_shape[i][1],fire_shape[i+1][0],fire_shape[i+1][1]))
+        reducefactor = round(0.1/(sum(distancebetween)/len(distancebetween)))
+        lowresct = []
+        lowresfire = []
+        if(reducefactor > 0):
+            for k in range(0,len(fire_shape),reducefactor):
+                lowresfire.append(fire_shape[k])
+        else:
+            for k in range(len(fire_shape)):
+                lowresfire.append(fire_shape[k])
+        for l in range(0,len(coords),2):
+            lowresct.append(coords[l])
+        closest_points.append(closest(lowresfire,lowresct))
+    return closest_points
             
 class FireTracker():
     def __init__(self, trail):
@@ -173,6 +195,10 @@ class FireTracker():
             "PNT": {
                 "states": ["Montana", "Idaho", "Washington"],
                 "data": None
+            },
+            "AZT": {
+                "states": ["Arizona"],
+                "data": None
             }
         }
         self.trail_linestring = get_trail_linestring(trail, self.trail_list)
@@ -181,6 +207,7 @@ class FireTracker():
         self.state_border_polygons = list(map(get_borders, self.states))
         self.current_fires = get_current_fires(self.state_border_polygons)
         self.fires_crossing_trail = get_fires_crossing_trail(self.trail_linestring, self.current_fires)
+        self.closest_points = get_closest_points(self.trail_linestring, self.current_fires)
     def create_SMS(self):
         self.text += f"Total fires in {', '.join(self.states)}: {self.current_fires}\n"
         for fire in self.current_fires:
@@ -205,77 +232,10 @@ class FireTracker():
                 if(abs(endmi - startmi) > 1):
                     text += f" to mi. {round(endmi)}"
                 text += "\n"
-                # del cofireshapes[i] ???
-                # del cofires[i] ???
 
 def main():
 
     threading.Timer(3600, main).start()
-
-    # Check if any fires cross the trail
-
-    if cross == False:
-        text += "0 fires cross the CT\n"
-    if cross == True:
-        text += str(ncross)
-        text += " fires cross the CT\n"
-
-    # If fires do not cross the trail, find their closest point to the trail
-
-    closestpoints = []
-    for i in range(len(cofireshapes)):
-        distancebetween = []
-        for j in range(len(cofireshapes[i])-1):
-            distancebetween.append(getdistance(cofireshapes[i][j][0],cofireshapes[i][j][1],cofireshapes[i][j+1][0],cofireshapes[i][j+1][1]))
-        reducefactor = round(0.1/(sum(distancebetween)/len(distancebetween)))
-        lowresct = []
-        lowresfire = []
-        lowrescw = []
-        if(reducefactor > 0):
-            for k in range(0,len(cofireshapes[i]),reducefactor):
-                lowresfire.append(cofireshapes[i][k])
-        else:
-            for k in range(len(cofireshapes[i])):
-                lowresfire.append(cofireshapes[i][k])
-        for l in range(0,len(ctcoords),2):
-            lowresct.append(ctcoords[l])
-        for m in range(0,len(cwcoords),2):
-            lowrescw.append(cwcoords[m])
-        closestpoints.append([closest(lowresfire,lowresct),closest(lowresfire,lowrescw)])
-
-    # show line from fire to closest point on trail
-
-    # for i in range(len(closestpoints)):
-    #     for j in range(len(closestpoints[i])):
-    #         fireline = []
-    #         fireline.append(tuple(closestpoints[i][j][1]))
-    #         swap = []
-    #         swap.append(closestpoints[i][j][2][1])
-    #         swap.append(closestpoints[i][j][2][0])
-    #         fireline.append(tuple(swap))
-    #         fl = LineString(fireline)
-    #         x,y = fl.xy
-    #         plt.plot(x,y,linestyle = 'dotted', color = "red")
-
-    for i in range(len(closestpoints)):
-        if(closestpoints[i][0][0] < 50):
-            text += str(cofires[i]['attributes']['irwin_IncidentName'])
-            text += " Fire: "
-            text += str(round(closestpoints[i][0][0],1))
-            text += "mi from CT @ mi "
-            text += str(round(milemarkers[closestpoints[i][0][2]],1))
-            if(closestpoints[i][1][0] < 50):
-                text += " and "
-                text += str(round(closestpoints[i][1][0],1))
-                text += "mi from CW alt @ mi "
-                text += str(round(cwmilemarkers[closestpoints[i][1][2]],1))
-        elif(closestpoints[i][1][0] < 50):
-            text += str(cofires[i]['attributes']['irwin_IncidentName'])
-            text += " Fire is: "
-            text += str(round(closestpoints[i][1][0],1))
-            text += "mi from CW alt @ mi "
-            text += str(round(cwmilemarkers[closestpoints[i][1][2]],1))
-        text += "\n"
     
     return text
 
