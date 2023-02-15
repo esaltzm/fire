@@ -80,8 +80,8 @@ def get_borders(state):
 
 # Retrieve trail data as Shapely linestring
 
-def get_trail_linestring(trail):
-    gpx = open(trail , 'r')
+def get_trail_linestring(trail, trail_list):
+    gpx = open(trail_list[trail]['data'], 'r')
     line = gpx.readline()
     coords = []
     while line:
@@ -153,34 +153,31 @@ def get_fires_crossing_trail(trail_linestring, current_fires):
             fires_crossing_trail.append(fire)
     return fires_crossing_trail
             
-# trail_list object specifies list of states for each trail + location of trail data
-
-trail_list = {
-    "CT": {
-        "states": ["Colorado"],
-        "data": "ct.txt"
-    },
-    "PCT": {
-        "states": ["California", "Oregon", "Washington"],
-        "data": None
-    },
-    "CDT": {
-        "states": ["New Mexico", "Colorado", "Wyoming", "Idaho", "Montana"],
-        "data": None
-    },
-    "PNT": {
-        "states": ["Montana", "Idaho", "Washington"],
-        "data": None
-    }
-}
-
 class FireTracker():
     def __init__(self, trail):
         self.text = ""
         self.trail = trail
-        self.trail_linestring = get_trail_linestring(trail)
+        self.trail_list = {
+            "CT": {
+                "states": ["Colorado"],
+                "data": "ct.txt"
+            },
+            "PCT": {
+                "states": ["California", "Oregon", "Washington"],
+                "data": None
+            },
+            "CDT": {
+                "states": ["New Mexico", "Colorado", "Wyoming", "Idaho", "Montana"],
+                "data": None
+            },
+            "PNT": {
+                "states": ["Montana", "Idaho", "Washington"],
+                "data": None
+            }
+        }
+        self.trail_linestring = get_trail_linestring(trail, self.trail_list)
         self.trail_mile_markers = get_mile_markers(self.trail_linestring)
-        self.states = trail_list[trail]
+        self.states = self.trail_list[trail]['states']
         self.state_border_polygons = list(map(get_borders, self.states))
         self.current_fires = get_current_fires(self.state_border_polygons)
         self.fires_crossing_trail = get_fires_crossing_trail(self.trail_linestring, self.current_fires)
