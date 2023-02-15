@@ -131,52 +131,28 @@ def get_current_fires(state_border_polygons):
                         listofcoords.append(coord)
                         in_state = True
         if in_state == True:
-            current_fires["fires"].append(fire)
-            current_fires["fire_shapes"].append(Polygon(listofcoords))
+            current_fires.append({
+                "fire": fire,
+                "shape": Polygon(listofcoords)
+            })
     return current_fires
 
-def switch_xy(linestring):
-    coordlist = list(linestring.coords)
-    for i in range(len(coordlist)):
-        item = list(coordlist[i])
+def switch_xy(points):
+    for i in range(len(points)):
+        item = list(points[i])
         temp = item[0]
         item[0] = item[1]
         item[1] = temp
-        coordlist[i] = tuple(item)
-    return LineString(coordlist)
+        points[i] = tuple(item)
+    return points
 
 def get_fires_crossing_trail(trail_linestring, current_fires):
-    reversed_linestring = switch_xy(trail_linestring)
-    cross = False
-    ncross = 0
-    for fire_shape in current_fires["fire_shapes"]:
-        if trail_linestring.intersects(fire_shape):
-            cross_points = list(trail_linestring.intersection(fire_shape).coords)
-            start = crosslist[0]
-            end = crosslist[len(crosslist)-1]
-            startlist = list(start)
-            endlist = list(end)
-            temp = startlist[0]
-            startlist[0] = startlist[1]
-            startlist[1] = temp
-            start = tuple(startlist)
-            temp = endlist[0]
-            endlist[0] = endlist[1]
-            endlist[1] = temp
-            end = tuple(endlist)
-            startmi = milemarkers[approx(start,list(milemarkers.keys()))]
-            endmi = milemarkers[approx(end,list(milemarkers.keys()))]
-            text += "The "
-            text += str(cofires[i]['attributes']['irwin_IncidentName'])
-            text += " Fire crosses the CT at mi. "
-            text += str(round(startmi))
-            if(abs(endmi - startmi) > 1):
-                text += " to mi. "
-                text += str(round(endmi))
-            text += "\n"
-            del cofireshapes[i]
-            del cofires[i]
-
+    fires_crossing_trail = []
+    for fire in current_fires:
+        if trail_linestring.intersects(fire["shape"]):
+            fires_crossing_trail.append(fire)
+    return fires_crossing_trail
+            
 # trail_list object specifies list of states for each trail + location of trail data
 
 trail_list = {
@@ -207,12 +183,13 @@ class FireTracker():
         self.states = trail_list[trail]
         self.state_border_polygons = list(map(get_borders, self.states))
         self.current_fires = get_current_fires(self.state_border_polygons)
+        self.fires_crossing_trail = get_fires_crossing_trail(self.trail_linestring, self.current_fires)
     def create_SMS(self):
         self.text += f"Total fires in {', '.join(self.states)}: {self.current_fires}\n"
         for fire in self.current_fires:
-            self.text += f"{str(fire['attributes']['irwin_IncidentName'])} Fire"
-            area = round(fire['attributes']['poly_GISAcres'])
-            containment = round(fire['attributes']['irwin_PercentContained'])
+            self.text += f"{str(fire['fire']['attributes']['irwin_IncidentName'])} Fire"
+            area = round(fire['fire']['attributes']['poly_GISAcres'])
+            containment = round(fire['fire']['attributes']['irwin_PercentContained'])
             if area or containment: self.text += ' - '
             if area:
                 self.text += str(area) + " acres"
@@ -220,12 +197,25 @@ class FireTracker():
             if containment:
                 text += str(containment) + "%% contained"
 
+            text += f"\n{len(self.fires_crossing_trail)} fires currently cross the {self.trail}\n"
+            for fire in self.fires_crossing_trail:
+                cross_points = list(self.trail_linestring.intersection(fire['shape']).coords)
+                start = tuple(switch_xy(list(cross_points[0])))
+                end = tuple(switch_xy(list(cross_points[len(cross_points)-1])))
+                startmi = self.trail_mile_markers[approx(start,list(self.trail_mile_markers.keys()))]
+                endmi = self.trail_mile_markers[approx(end,list(self.trail_mile_markers.keys()))]
+                text += f"The {fire['fire']['attributes']['irwin_IncidentName']} Fire crosses the {self.trail} at mi. {round(startmi)}"
+                if(abs(endmi - startmi) > 1):
+                    text += f" to mi. {round(endmi)}"
+                text += "\n"
+                # del cofireshapes[i] ???
+                # del cofires[i] ???
+
 def main():
 
     threading.Timer(3600, main).start()
 
     # Check if any fires cross the trail
-
 
     if cross == False:
         text += "0 fires cross the CT\n"
@@ -258,17 +248,17 @@ def main():
 
     # show line from fire to closest point on trail
 
-    for i in range(len(closestpoints)):
-        for j in range(len(closestpoints[i])):
-            fireline = []
-            fireline.append(tuple(closestpoints[i][j][1]))
-            swap = []
-            swap.append(closestpoints[i][j][2][1])
-            swap.append(closestpoints[i][j][2][0])
-            fireline.append(tuple(swap))
-            fl = LineString(fireline)
-            x,y = fl.xy
-            plt.plot(x,y,linestyle = 'dotted', color = "red")
+    # for i in range(len(closestpoints)):
+    #     for j in range(len(closestpoints[i])):
+    #         fireline = []
+    #         fireline.append(tuple(closestpoints[i][j][1]))
+    #         swap = []
+    #         swap.append(closestpoints[i][j][2][1])
+    #         swap.append(closestpoints[i][j][2][0])
+    #         fireline.append(tuple(swap))
+    #         fl = LineString(fireline)
+    #         x,y = fl.xy
+    #         plt.plot(x,y,linestyle = 'dotted', color = "red")
 
     for i in range(len(closestpoints)):
         if(closestpoints[i][0][0] < 50):
@@ -292,14 +282,9 @@ def main():
     
     return text
 
-# Save visuals
-
-# plt.savefig("fire.png", dpi = 200)
-
 text = main()
 print(text)
 
-#app = Flask(__name__)
 @app.route("/sms", methods=['POST'])
 
 def sms_reply():
