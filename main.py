@@ -2,7 +2,7 @@ import requests
 import threading
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import LineString, Polygon, Multipolygon, Point
+from shapely.geometry import LineString, Polygon, Point
 import geopandas as gpd
 from math import radians, cos, sin, asin, sqrt
 
@@ -72,11 +72,14 @@ def closest_node(node, nodes):
 # Retrieve state border data as a Shapely object
 
 def get_borders(state):
-    borders = gpd.read_file('tl_2022_us_state.shp')
+    borders = gpd.read_file('./state_borders/tl_2022_us_state.shp')
     borders = borders.to_crs(epsg=4326)
     borders = borders[['NAME', 'geometry']]
     borders = borders.set_index('NAME')
-    return borders.loc[state]
+    state_border = borders.loc[state]
+    if isinstance(state_border, gpd.GeoSeries):
+        raise ValueError(f"State '{state}' has multiple borders, please use get_borders_list() instead.")
+    return state_border.geometry
 
 # Retrieve trail data as Shapely linestring
 
@@ -85,14 +88,9 @@ def get_trail_linestring(trail, trail_list):
     line = gpx.readline()
     coords = []
     while line:
-        coords = line.split("\t")
-        if(len(coords) == 5):
-            del coords[0:2]
-            del coords[2]
-            latlong = []
-            for coord in coords:
-                latlong.append(float(coord))
-            coords.append(tuple(latlong))
+        coord = line.split("\t")
+        if len(coord) == 5:
+            coords.append((coord[2], coord[3]))
         line = gpx.readline()
     gpx.close()
     return LineString(coords)
@@ -116,21 +114,18 @@ def in_state(coord, state_border_polygons):
 
 def get_current_fires(state_border_polygons):
     fires = callAPI()
-    current_fires = {
-        "fires": [],
-        "fire_shapes": []
-    }
+    current_fires = []
     for fire in fires:
-        in_state = False
+        fire_in_state = False
         listofcoords = []
         for key in fire:
             coords = fire['geometry']['rings']
             for coordlist in coords:
                 for coord in coordlist:
-                    if(in_state(coord, state_border_polygons)):
+                    if in_state(coord, state_border_polygons):
                         listofcoords.append(coord)
-                        in_state = True
-        if in_state == True:
+                        fire_in_state = True
+        if fire_in_state == True:
             current_fires.append({
                 "fire": fire,
                 "shape": Polygon(listofcoords)
@@ -204,12 +199,12 @@ class FireTracker():
         self.trail_linestring = get_trail_linestring(trail, self.trail_list)
         self.trail_mile_markers = get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
-        self.state_border_polygons = list(map(get_borders, self.states))
+        self.state_border_polygons = [get_borders(state) for state in self.states]
         self.current_fires = get_current_fires(self.state_border_polygons)
         self.fires_crossing_trail = get_fires_crossing_trail(self.trail_linestring, self.current_fires)
         self.closest_points = get_closest_points(self.trail_linestring, self.current_fires)
     def create_SMS(self):
-        self.text += f"Total fires in {', '.join(self.states)}: {self.current_fires}\n"
+        self.text += f"Total fires in {', '.join(self.states)}: {len(self.current_fires)}\n"
         for fire in self.current_fires:
             self.text += f"{str(fire['fire']['attributes']['irwin_IncidentName'])} Fire"
             area = round(fire['fire']['attributes']['poly_GISAcres'])
@@ -233,26 +228,22 @@ class FireTracker():
                     text += f" to mi. {round(endmi)}"
                 text += "\n"
 
-def main():
+ct = FireTracker('CT')
+ct.create_SMS()
+print(ct.text)
 
-    threading.Timer(3600, main).start()
-    
-    return text
 
-text = main()
-print(text)
+# @app.route("/sms", methods=['POST'])
 
-@app.route("/sms", methods=['POST'])
+# def sms_reply():
+#     resp = MessagingResponse()
+#     resp.message(text)
+#     return str(resp)
 
-def sms_reply():
-    resp = MessagingResponse()
-    resp.message(text)
-    return str(resp)
+# if __name__ == "__main__":
+#     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
-if __name__ == "__main__":
-    app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
-
-# TO DO :
-# refactor
-# create test fire data to check refactoring
-# assemble trail data 
+# # TO DO :
+# # refactor
+# # create test fire data to check refactoring
+# # assemble trail data 
