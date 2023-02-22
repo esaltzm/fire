@@ -54,12 +54,14 @@ def closest(fire, ctcoords):
     return comparisons[0]
 
 def approx(loc, diclist):
-    comparisons = []
+    least_dist = 10000000
+    closest_point = (0,0)
     for latlong in diclist:
         d = getdistance(loc[0],loc[1],latlong[0],latlong[1])
-        comparisons.append([d,coords,latlong])
-    comparisons.sort()
-    return comparisons[0][2]
+        if d < least_dist:
+            least_dist = d
+            closest_point = latlong
+    return closest_point
 
 # Method of finding approximate mile marker when none match
 
