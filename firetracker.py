@@ -135,9 +135,9 @@ class FireTracker():
         return milemarkers
 
     def is_in_state(self, coord, state_border_polygons):
+        # print('coord', coord, 'state_border_polygons', state_border_polygons)
         p = Point(coord[1], coord[0])
         return any(state.contains(p) for state in state_border_polygons)
-
 
     def get_state_fires(self, state_border_polygons):
         current_fires = self.call_fire_api()
@@ -145,14 +145,11 @@ class FireTracker():
         for fire in current_fires:
             in_state = False
             listofcoords = []
-            for key in fire:
-                coords = fire['geometry']['rings']
-                for coordlist in coords:
-                    for coord in coordlist:
-                        if self.is_in_state(coord, state_border_polygons):
-                            print(coord)
-                            listofcoords.append(coord)
-                            in_state = True
+            coords = fire['geometry']['rings'][0][0]
+            for coord in coords:
+                if self.is_in_state(coord, state_border_polygons):
+                    listofcoords.append(coord)
+                    in_state = True
             if in_state == True:
                 state_fires.append({
                     "attributes": {
@@ -201,27 +198,31 @@ class FireTracker():
             low_res_trail = self.reduce_if_greater(trail_coords, 2000)
             low_res_fire = self.reduce_if_greater(fire_coords, 5000)
             closest_points.append(self.closest(low_res_trail, low_res_fire))
-        return closest_points ## arr of {
-                #     'distance': d,
-                #     'fire_coord': fire_coord,
-                #     'trail_coord': trail_coord
-                # } for each fire
+        return closest_points
+        # closest_points = arr of {
+        #     'distance': d,
+        #     'fire_coord': fire_coord,
+        #     'trail_coord': trail_coord
+        # } for each fire
     
     def text_add_state_fires(self):
-        self.text += f"Total fires in {', '.join(self.states)}: {len(self.state_fires)}\n"
+        text = ''
+        text += f"Total fires in {', '.join(self.states)}: {len(self.state_fires)}\n"
         for fire in self.state_fires:
             attributes = fire['attributes']
-            self.text += f"{attributes['name']} Fire"
+            text += f"{attributes['name']} Fire"
             area = round(attributes['acres'])
             containment = round(attributes['containment'])
-            if area or containment: self.text += ' - '
+            if area or containment: text += ' - '
             if area:
-                self.text += str(area) + " acres"
-                if containment: self.text += ", "
+                text += str(area) + " acres"
+                if containment: text += ", "
             if containment:
                 text += str(containment) + "%% contained"
+        self.text += text
 
     def text_add_fires_crossing_trail(self):
+        text = ''
         text += f"\n{len(self.fires_crossing_trail)} fires currently cross the {self.trail}\n"
         for fire in self.fires_crossing_trail:
             cross_points = list(self.trail_linestring.intersection(fire['shape']).coords)
@@ -233,6 +234,7 @@ class FireTracker():
             if(abs(endmi - startmi) > 1):
                 text += f" to mi. {round(endmi)}"
             text += "\n"
+        self.text += text
 
     def create_SMS(self):
         self.text_add_state_fires()
