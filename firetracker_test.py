@@ -49,7 +49,7 @@ class FireUnitTesting(unittest.TestCase):
     def test_fire_not_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
-            self.assertTrue(len(tracker.state_fires) - len(tracker.fires_crossing_trail) == 1)
+            self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥' and fire not in tracker.fires_crossing_trail for fire in tracker.state_fires))
             print('test_fire_not_crossing_trail PASSED: test fire was not crossing trail.')
         except AssertionError:
             print('test_fire_not_crossing_trail FAILED: test fire was crossing the trail.')
@@ -57,7 +57,7 @@ class FireUnitTesting(unittest.TestCase):
     def test_fire_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
-            self.assertTrue(len(tracker.fires_crossing_trail) == 1)
+            self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥' for fire in tracker.fires_crossing_trail))
             print('test_fire_crossing_trail PASSED: test fire was crossing trail.')
         except AssertionError:
             print('test_fire_crossing_trail FAILED: test fire was not crossing the trail.')

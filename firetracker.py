@@ -221,7 +221,7 @@ class FireTracker():
 
     def text_add_fires_crossing_trail(self):
         text = ''
-        text += f'\n{len(self.fires_crossing_trail)} fires currently cross the {self.trail}\n'
+        text += f'\n{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:
             cross_points = list(self.trail_linestring.intersection(fire['shape']).coords)
             start = list(cross_points[0])
