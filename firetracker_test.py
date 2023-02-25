@@ -1,13 +1,13 @@
 import unittest
+import copy
 from firetracker import FireTracker
 
 class TestFireTracker(FireTracker):
     def __init__(self, trail, test_fires):
         self.test_fires = test_fires
         super(TestFireTracker, self).__init__(trail)
-
     def call_fire_api(self):
-        return self.test_fires
+        return copy.deepcopy(self.test_fires)
 
 class FireUnitTesting(unittest.TestCase):
 
@@ -42,35 +42,34 @@ class FireUnitTesting(unittest.TestCase):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥' for fire in tracker.state_fires))
-            print('test_add_fire passed: test fire was added to state fires.')
+            print('test_add_fire PASSED: test fire was added to state fires.')
         except AssertionError:
-            print('Test failed: test fire was not added to state fires.')
+            print('test_add_fire FAILED: test fire was not added to state fires.')
     
     def test_fire_not_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(len(tracker.state_fires) - len(tracker.fires_crossing_trail) == 1)
-            print('test_fire_not_crossing_trail passed: test fire was not crossing trail.')
+            print('test_fire_not_crossing_trail PASSED: test fire was not crossing trail.')
         except AssertionError:
-            print('test_fire_not_crossing_trail failed: test fire was crossing the trail.')
-            print(list(tracker.fires_crossing_trail[0]['shape'].exterior.coords))
+            print('test_fire_not_crossing_trail FAILED: test fire was crossing the trail.')
 
     def test_fire_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(len(tracker.fires_crossing_trail) == 1)
-            print('test_fire_crossing_trail passed: test fire was crossing trail.')
+            print('test_fire_crossing_trail PASSED: test fire was crossing trail.')
         except AssertionError:
-            print('test_fire_crossing_trail failed: test fire was not crossing the trail.')
+            print('test_fire_crossing_trail FAILED: test fire was not crossing the trail.')
     
     def test_sms(self):
         tracker = TestFireTracker('CT', self.test_fires)
         tracker.create_SMS()
         try:
-            self.assertTrue(len(tracker.fires_crossing_trail) == 1)
-            print('test_fire_crossing_trail passed: test fire was crossing trail.')
+            self.assertTrue('crosses the CT at mi. 103 to mi. 121' in tracker.text)
+            print(f'test_sms PASSED: sms created\n\n{tracker.text}')
         except AssertionError:
-            print('test_fire_crossing_trail failed: test fire was not crossing the trail.')
+            print('test_sms FAILED: sms not created')
 
 if __name__ == '__main__':
     test_case = FireUnitTesting()

@@ -11,41 +11,41 @@ from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
-if os.environ.get('mode') == "dev":
+if os.environ.get('mode') == 'dev':
     DEBUG = True
     DEVELOPMENT = True
-    LISTEN_ADDRESS = "127.0.0.1"
+    LISTEN_ADDRESS = '127.0.0.1'
     LISTEN_PORT = 5000
 else:
     DEBUG = False
     TESTING = False
-    LISTEN_ADDRESS = "209.94.59.175"
+    LISTEN_ADDRESS = '209.94.59.175'
     LISTEN_PORT = 5000
             
 class FireTracker():
     def __init__(self, trail):
-        self.text = ""
+        self.text = ''
         self.trail = trail
         self.trail_list = {
-            "CT": {
-                "states": ["Colorado"],
-                "data": "ct.txt"
+            'CT': {
+                'states': ['Colorado'],
+                'data': 'ct.txt'
             },
-            "PCT": {
-                "states": ["California", "Oregon", "Washington"],
-                "data": None
+            'PCT': {
+                'states': ['California', 'Oregon', 'Washington'],
+                'data': None
             },
-            "CDT": {
-                "states": ["New Mexico", "Colorado", "Wyoming", "Idaho", "Montana"],
-                "data": None
+            'CDT': {
+                'states': ['New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
+                'data': None
             },
-            "PNT": {
-                "states": ["Montana", "Idaho", "Washington"],
-                "data": None
+            'PNT': {
+                'states': ['Montana', 'Idaho', 'Washington'],
+                'data': None
             },
-            "AZT": {
-                "states": ["Arizona"],
-                "data": None
+            'AZT': {
+                'states': ['Arizona'],
+                'data': None
             }
         }
         self.trail_linestring = self.get_trail_linestring(trail, self.trail_list)
@@ -57,7 +57,7 @@ class FireTracker():
         self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
 
     def call_fire_api(self):
-        api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+        api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
         response = requests.get(api_url)
         data = response.json()
         return data['features']
@@ -105,7 +105,7 @@ class FireTracker():
         borders = borders.set_index('NAME')
         state_border = borders.loc[state]
         if isinstance(state_border, gpd.GeoSeries):
-            raise ValueError(f"State '{state}' has multiple borders")
+            raise ValueError(f'State {state} has multiple borders')
         return state_border.geometry
 
     # Retrieve trail data as Shapely linestring
@@ -115,7 +115,7 @@ class FireTracker():
         line = gpx.readline()
         coords = []
         while line:
-            coord = line.split("\t")
+            coord = line.split('\t')
             if len(coord) == 5:
                 coords.append((coord[2], coord[3]))
             line = gpx.readline()
@@ -135,7 +135,6 @@ class FireTracker():
         return milemarkers
 
     def is_in_state(self, coord, state_border_polygons):
-        # print('coord', coord, 'state_border_polygons', state_border_polygons)
         p = Point(coord[1], coord[0])
         return any(state.contains(p) for state in state_border_polygons)
 
@@ -152,12 +151,12 @@ class FireTracker():
                     in_state = True
             if in_state == True:
                 state_fires.append({
-                    "attributes": {
-                        "name": fire['attributes']['irwin_IncidentName'],
-                        "acres": fire['attributes']['poly_GISAcres'],
-                        "containment": fire['attributes']['irwin_PercentContained']
+                    'attributes': {
+                        'name': fire['attributes']['irwin_IncidentName'],
+                        'acres': fire['attributes']['poly_GISAcres'],
+                        'containment': fire['attributes']['irwin_PercentContained']
                     },
-                    "shape": Polygon(listofcoords)
+                    'shape': Polygon(listofcoords)
                 })
         return state_fires
 
@@ -171,7 +170,7 @@ class FireTracker():
     def get_fires_crossing_trail(self, trail_linestring, state_fires):
         fires_crossing_trail = []
         for fire in state_fires:
-            if trail_linestring.intersects(fire["shape"]):
+            if trail_linestring.intersects(fire['shape']):
                 fires_crossing_trail.append(fire)
         return fires_crossing_trail
     
@@ -213,25 +212,26 @@ class FireTracker():
             containment = round(attributes['containment'])
             if area or containment: text += ' - '
             if area:
-                text += str(area) + " acres"
-                if containment: text += ", "
+                text += str(area) + ' acres'
+                if containment: text += ', '
             if containment:
-                text += str(containment) + "%% contained"
+                text += str(containment) + '% contained'
+            text += '\n'
         self.text += text
 
     def text_add_fires_crossing_trail(self):
         text = ''
-        text += f"\n{len(self.fires_crossing_trail)} fires currently cross the {self.trail}\n"
+        text += f'\n{len(self.fires_crossing_trail)} fires currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:
             cross_points = list(self.trail_linestring.intersection(fire['shape']).coords)
-            start = tuple(self.switch_xy(list(cross_points[0])))
-            end = tuple(self.switch_xy(list(cross_points[len(cross_points)-1])))
+            start = list(cross_points[0])
+            end = list(cross_points[len(cross_points) - 1])
             startmi = self.trail_mile_markers[self.approx(start,list(self.trail_mile_markers.keys()))]
             endmi = self.trail_mile_markers[self.approx(end,list(self.trail_mile_markers.keys()))]
             text += f"The {fire['attributes']['name']} Fire crosses the {self.trail} at mi. {round(startmi)}"
             if(abs(endmi - startmi) > 1):
-                text += f" to mi. {round(endmi)}"
-            text += "\n"
+                text += f' to mi. {round(endmi)}'
+            text += '\n'
         self.text += text
 
     def create_SMS(self):
@@ -243,14 +243,14 @@ class FireTracker():
 # print(ct.text)
 
 
-# @app.route("/sms", methods=['POST'])
+# @app.route('/sms', methods=['POST'])
 
 # def sms_reply():
 #     resp = MessagingResponse()
 #     resp.message(text)
 #     return str(resp)
 
-# if __name__ == "__main__":
+# if __name__ == '__main__':
 #     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
 
 # # TO DO :
