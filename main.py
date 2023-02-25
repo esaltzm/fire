@@ -22,12 +22,11 @@ else:
     LISTEN_ADDRESS = "209.94.59.175"
     LISTEN_PORT = 5000
 
-def callAPI():
+def call_fire_api():
     api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
     response = requests.get(api_url)
-    all = response.json()
-    fires = all['features']
-    return fires
+    data = response.json()
+    return data['features']
 
 # distance formula
 
@@ -80,7 +79,7 @@ def get_borders(state):
     borders = borders.set_index('NAME')
     state_border = borders.loc[state]
     if isinstance(state_border, gpd.GeoSeries):
-        raise ValueError(f"State '{state}' has multiple borders, please use get_borders_list() instead.")
+        raise ValueError(f"State '{state}' has multiple borders")
     return state_border.geometry
 
 # Retrieve trail data as Shapely linestring
@@ -109,25 +108,25 @@ def get_mile_markers(linestring):
         distance += current_distance
     return milemarkers
 
-def in_state(coord, state_border_polygons):
+def is_in_state(coord, state_border_polygons):
     p = Point(coord[1], coord[0])
     return any(state.contains(p) for state in state_border_polygons)
 
 
 def get_current_fires(state_border_polygons):
-    fires = callAPI()
+    fires = call_fire_api()
     current_fires = []
     for fire in fires:
-        fire_in_state = False
+        in_state = False
         listofcoords = []
         for key in fire:
             coords = fire['geometry']['rings']
             for coordlist in coords:
                 for coord in coordlist:
-                    if in_state(coord, state_border_polygons):
+                    if is_in_state(coord, state_border_polygons):
                         listofcoords.append(coord)
-                        fire_in_state = True
-        if fire_in_state == True:
+                        in_state = True
+        if in_state == True:
             current_fires.append({
                 "fire": fire,
                 "shape": Polygon(listofcoords)
