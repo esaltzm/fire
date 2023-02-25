@@ -145,7 +145,7 @@ class FireTracker():
         for fire in current_fires:
             in_state = False
             listofcoords = []
-            coords = fire['geometry']['rings'][0][0]
+            coords = fire['geometry']['rings'][0]
             for coord in coords:
                 if self.is_in_state(coord, state_border_polygons):
                     listofcoords.append(coord)
