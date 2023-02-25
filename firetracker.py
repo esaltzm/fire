@@ -52,9 +52,9 @@ class FireTracker():
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_borders(state) for state in self.states]
-        self.current_fires = self.get_current_fires(self.state_border_polygons)
-        self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.current_fires)
-        self.closest_points = self.get_closest_points(self.trail_linestring, self.current_fires)
+        self.state_fires = self.get_state_fires(self.state_border_polygons)
+        self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.state_fires)
+        self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
 
     def call_fire_api(self):
         api_url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
@@ -144,10 +144,10 @@ class FireTracker():
         return any(state.contains(p) for state in state_border_polygons)
 
 
-    def get_current_fires(self, state_border_polygons):
-        fires = self.call_fire_api()
-        current_fires = []
-        for fire in fires:
+    def get_state_fires(self, state_border_polygons):
+        current_fires = self.call_fire_api()
+        state_fires = []
+        for fire in current_fires:
             in_state = False
             listofcoords = []
             for key in fire:
@@ -158,11 +158,11 @@ class FireTracker():
                             listofcoords.append(coord)
                             in_state = True
             if in_state == True:
-                current_fires.append({
+                state_fires.append({
                     "fire": fire,
                     "shape": Polygon(listofcoords)
                 })
-        return current_fires
+        return state_fires
 
     def switch_xy(self, points):
         for i in range(len(points)):
@@ -173,17 +173,17 @@ class FireTracker():
             points[i] = tuple(item)
         return points
 
-    def get_fires_crossing_trail(self, trail_linestring, current_fires):
+    def get_fires_crossing_trail(self, trail_linestring, state_fires):
         fires_crossing_trail = []
-        for fire in current_fires:
+        for fire in state_fires:
             if trail_linestring.intersects(fire["shape"]):
                 fires_crossing_trail.append(fire)
         return fires_crossing_trail
 
-    def get_closest_points(self, trail_linestring, current_fires):
+    def get_closest_points(self, trail_linestring, state_fires):
         closest_points = []
         coords = list(trail_linestring.coords)
-        for fire in current_fires:
+        for fire in state_fires:
             fire_shape = fire["shape"]
             distancebetween = []
             for i in range(len(fire_shape)-1):
@@ -202,8 +202,8 @@ class FireTracker():
             closest_points.append(self.closest(lowresfire,lowresct))
         return closest_points
     def create_SMS(self):
-        self.text += f"Total fires in {', '.join(self.states)}: {len(self.current_fires)}\n"
-        for fire in self.current_fires:
+        self.text += f"Total fires in {', '.join(self.states)}: {len(self.state_fires)}\n"
+        for fire in self.state_fires:
             self.text += f"{str(fire['fire']['attributes']['irwin_IncidentName'])} Fire"
             area = round(fire['fire']['attributes']['poly_GISAcres'])
             containment = round(fire['fire']['attributes']['irwin_PercentContained'])
@@ -226,9 +226,9 @@ class FireTracker():
                     text += f" to mi. {round(endmi)}"
                 text += "\n"
 
-ct = FireTracker('CT')
-ct.create_SMS()
-print(ct.text)
+# ct = FireTracker('CT')
+# ct.create_SMS()
+# print(ct.text)
 
 
 # @app.route("/sms", methods=['POST'])
