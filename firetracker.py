@@ -24,7 +24,7 @@ else:
     LISTEN_PORT = 5000
             
 class FireTracker():
-    def __init__(self, trail):
+    def __init__(self, trail: str) -> None:
         self.text = ''
         self.trail = trail
         self.trail_list = {
@@ -57,7 +57,7 @@ class FireTracker():
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.state_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
 
-    def call_fire_api(self):
+    def call_fire_api(self) -> List[object]:
         api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
         response = requests.get(api_url)
         data = response.json()
@@ -196,7 +196,7 @@ class FireTracker():
         #     'trail_coord': trail_coord
         # } for each fire
     
-    def text_add_state_fires(self):
+    def text_add_state_fires(self) -> None:
         text = ''
         text += f"Total fires in {', '.join(self.states)}: {len(self.state_fires)}\n"
         for fire in self.state_fires:
@@ -213,7 +213,7 @@ class FireTracker():
             text += '\n'
         self.text += text
 
-    def text_add_fires_crossing_trail(self):
+    def text_add_fires_crossing_trail(self) -> None:
         text = ''
         text += f'\n{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:

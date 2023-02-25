@@ -1,12 +1,15 @@
 import unittest
 import copy
+from typing import *
 from firetracker import FireTracker
 
 class TestFireTracker(FireTracker):
-    def __init__(self, trail, test_fires):
+
+    def __init__(self, trail: str, test_fires: List[object]) -> None:
         self.test_fires = test_fires
         super(TestFireTracker, self).__init__(trail)
-    def call_fire_api(self):
+
+    def call_fire_api(self) -> List[object]:
         return copy.deepcopy(self.test_fires)
 
 class FireUnitTesting(unittest.TestCase):
@@ -38,7 +41,7 @@ class FireUnitTesting(unittest.TestCase):
         }
     ]
 
-    def test_add_fires(self):
+    def test_add_fires(self) -> None:
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(len(tracker.state_fires) == 2)
@@ -46,7 +49,7 @@ class FireUnitTesting(unittest.TestCase):
         except AssertionError:
             print('test_add_fires FAILED: test fires was were added to state fires.')
     
-    def test_fire_not_crossing_trail(self):
+    def test_fire_not_crossing_trail(self) -> None:
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥' and fire not in tracker.fires_crossing_trail for fire in tracker.state_fires))
@@ -54,7 +57,7 @@ class FireUnitTesting(unittest.TestCase):
         except AssertionError:
             print('test_fire_not_crossing_trail FAILED: test fire was crossing the trail.')
 
-    def test_fire_crossing_trail(self):
+    def test_fire_crossing_trail(self) -> None:
         tracker = TestFireTracker('CT', self.test_fires)
         try:
             self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥' for fire in tracker.fires_crossing_trail))
@@ -62,7 +65,7 @@ class FireUnitTesting(unittest.TestCase):
         except AssertionError:
             print('test_fire_crossing_trail FAILED: test fire was not crossing the trail.')
     
-    def test_sms(self):
+    def test_sms(self) -> None:
         tracker = TestFireTracker('CT', self.test_fires)
         tracker.create_SMS()
         try:
