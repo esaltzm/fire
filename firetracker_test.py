@@ -20,7 +20,7 @@ class FireUnitTesting(unittest.TestCase):
             },
             'geometry': {
                 'rings': [
-                    [[38.070289, -107.460916], [38.070289, -107.556031], [38.135239, -107.556031], [38.135239, -107.460916]]
+                    [[ -107.460916, 38.070289], [ -107.556031, 38.070289], [ -107.556031, 38.135239], [ -107.460916, 38.135239]]
                 ]
             }
         },
@@ -32,7 +32,7 @@ class FireUnitTesting(unittest.TestCase):
             },
             'geometry': {
                 'rings': [
-                    [[39.673335, -106.330612], [39.485990, -106.338165], [39.466909, -106.051834], [39.689188, -106.066940]]
+                    [[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]
                 ]
             }
         }
@@ -49,7 +49,7 @@ class FireUnitTesting(unittest.TestCase):
     def test_fire_not_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
         try:
-            self.assertTrue(len(tracker.fires_crossing_trail) == 1)
+            self.assertTrue(len(tracker.state_fires) - len(tracker.fires_crossing_trail) == 1)
             print('test_fire_not_crossing_trail passed: test fire was not crossing trail.')
         except AssertionError:
             print('test_fire_not_crossing_trail failed: test fire was crossing the trail.')
@@ -57,6 +57,15 @@ class FireUnitTesting(unittest.TestCase):
 
     def test_fire_crossing_trail(self):
         tracker = TestFireTracker('CT', self.test_fires)
+        try:
+            self.assertTrue(len(tracker.fires_crossing_trail) == 1)
+            print('test_fire_crossing_trail passed: test fire was crossing trail.')
+        except AssertionError:
+            print('test_fire_crossing_trail failed: test fire was not crossing the trail.')
+    
+    def test_sms(self):
+        tracker = TestFireTracker('CT', self.test_fires)
+        tracker.create_SMS()
         try:
             self.assertTrue(len(tracker.fires_crossing_trail) == 1)
             print('test_fire_crossing_trail passed: test fire was crossing trail.')

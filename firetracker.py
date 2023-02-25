@@ -78,7 +78,7 @@ class FireTracker():
         comparisons = []
         for fire_coord in fire_coords:
             for trail_coord in trail_coords:
-                d = self.getdistance(fire_coord[1],fire_coord[0],trail_coord[0],trail_coord[1])
+                d = self.getdistance(fire_coord[0],fire_coord[1],trail_coord[0],trail_coord[1])
                 comparisons.append({
                     'distance': d,
                     'fire_coord': fire_coord,
@@ -145,7 +145,7 @@ class FireTracker():
         for fire in current_fires:
             in_state = False
             listofcoords = []
-            coords = fire['geometry']['rings'][0]
+            coords = self.switch_xy(fire['geometry']['rings'][0])
             for coord in coords:
                 if self.is_in_state(coord, state_border_polygons):
                     listofcoords.append(coord)
@@ -162,12 +162,10 @@ class FireTracker():
         return state_fires
 
     def switch_xy(self, points):
-        for i in range(len(points)):
-            item = list(points[i])
-            temp = item[0]
-            item[0] = item[1]
-            item[1] = temp
-            points[i] = tuple(item)
+        for point in points:
+            temp = point[0]
+            point[0] = point[1]
+            point[1] = temp
         return points
 
     def get_fires_crossing_trail(self, trail_linestring, state_fires):
