@@ -1,10 +1,14 @@
 import requests
 import threading
-import numpy as np
 import matplotlib.pyplot as plt
 from typing import *
 from shapely.geometry import LineString, Polygon, Point
+from shapely.ops import linemerge
 import geopandas as gpd
+import matplotlib.pyplot as plt
+import gpxpy
+from geopy import distance
+from sklearn.neighbors import NearestNeighbors
 from math import radians, cos, sin, asin, sqrt
 
 import os
@@ -30,32 +34,44 @@ class FireTracker():
         self.trail_list = {
             'CT': {
                 'states': ['Colorado'],
-                'data': 'ct.txt'
+                'data': 'gpx_files/Colorado_Trail.gpx'
             },
             'PCT': {
                 'states': ['California', 'Oregon', 'Washington'],
-                'data': None
+                'data': 'gpx_files/Pacific_Crest_Trail.gpx'
             },
             'CDT': {
                 'states': ['New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
-                'data': None
+                'data': 'gpx_files/Continental_Divide_Trail.gpx'
             },
             'PNT': {
                 'states': ['Montana', 'Idaho', 'Washington'],
-                'data': None
+                'data': 'gpx_files/Pacific_Northwest_Trail.gpx'
             },
             'AZT': {
                 'states': ['Arizona'],
-                'data': None
+                'data': 'gpx_files/Arizona_Trail.gpx'
             }
         }
-        self.trail_linestring = self.get_trail_linestring(trail, self.trail_list)
+        self.trail_linestring = self.get_trail_linestring(self.trail_list[trail]['data'])
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
         self.state_fires = self.get_state_fires(self.state_border_polygons)
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.state_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
+    
+    def plot(self):
+        y, x = self.trail_linestring.xy
+        plt.plot(x, y, color='green')
+        for fire in self.state_fires:
+            y, x = fire['shape'].exterior.xy
+            plt.fill(x, y, color='red')
+        for border in self.state_border_polygons:
+            x, y = border.exterior.xy
+            plt.plot(x, y, color='grey')
+        plt.axis('equal')
+        plt.savefig(f'{self.trail}_fires.png')
 
     def call_fire_api(self) -> List[object]:
         api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
@@ -109,28 +125,39 @@ class FireTracker():
         return state_border.geometry
 
     # Convert trail data to Shapely linestring
-    def get_trail_linestring(self, trail: str, trail_list: object) -> LineString:
-        gpx = open(trail_list[trail]['data'], 'r')
-        line = gpx.readline()
+    def get_trail_linestring(self, filename: str) -> LineString:
+        with open(filename, 'r') as gpx_file:
+            gpx = gpxpy.parse(gpx_file)
         coords = []
-        while line:
-            coord = line.split('\t')
-            if len(coord) == 5:
-                coords.append((coord[2], coord[3]))
-            line = gpx.readline()
-        gpx.close()
+        for track in gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    coords.insert(0, (point.latitude, point.longitude))
+        coords = self.remove_distant_points(coords)
         return LineString(coords)
+
+    def remove_distant_points(self, coords):
+        new_coords = []
+        prev_lat, prev_lon = None, None
+        for lat, lon in coords:
+            if prev_lat is not None and prev_lon is not None:
+                dist = distance.distance((prev_lat, prev_lon), (lat, lon)).miles
+                if dist > 300:
+                    continue  # Skip this point if it's more than 10 miles from the previous point
+            new_coords.append((lat, lon))
+            prev_lat, prev_lon = lat, lon
+        return new_coords
 
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
     def get_mile_markers(self, trail: LineString) -> dict:
-        milemarkers = {}
+        mile_markers = {}
         distance = 0
         coords = list(trail.coords)
         for i in range(1, len(coords)):
             current_distance = self.getdistance(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1])
-            milemarkers[coords[i]] = distance + current_distance
+            mile_markers[coords[i]] = distance + current_distance
             distance += current_distance
-        return milemarkers
+        return mile_markers
 
     def is_in_state(self, coord: List[float], borders: List[Polygon]) -> bool:
         p = Point(coord[1], coord[0])
@@ -165,6 +192,15 @@ class FireTracker():
         fires_crossing_trail = []
         for fire in fires:
             if trail.intersects(fire['shape']):
+                intersection = trail.intersection(fire['shape'])
+                if intersection.geom_type == 'LineString':
+                    cross_points = list(intersection.coords) 
+                else: #MultiLineString
+                    cross_points = []
+                    for line in intersection.geoms:
+                        for coord in line.coords:
+                            cross_points.append(coord)
+                fire['intersection'] = cross_points
                 fires_crossing_trail.append(fire)
         return fires_crossing_trail
     
@@ -217,9 +253,9 @@ class FireTracker():
         text = ''
         text += f'\n{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:
-            cross_points = list(self.trail_linestring.intersection(fire['shape']).coords)
-            start = list(cross_points[0])
-            end = list(cross_points[len(cross_points) - 1])
+            cross_points = fire['intersection']
+            start = cross_points[0]
+            end = cross_points[len(cross_points) - 1]
             start_mile = self.trail_mile_markers[self.approx_mile_marker(start,list(self.trail_mile_markers.keys()))]
             end_mile = self.trail_mile_markers[self.approx_mile_marker(end,list(self.trail_mile_markers.keys()))]
             text += f"The {fire['attributes']['name']} Fire crosses the {self.trail} at mi. {round(start_mile)}"
@@ -232,9 +268,9 @@ class FireTracker():
         self.text_add_state_fires()
         self.text_add_fires_crossing_trail()
 
-ct = FireTracker('CT')
-ct.create_SMS()
-print(ct.text)
+# ct = FireTracker('CT')
+# ct.create_SMS()
+# print(ct.text)
 
 
 # @app.route('/sms', methods=['POST'])

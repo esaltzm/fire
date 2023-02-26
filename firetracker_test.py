@@ -2,6 +2,7 @@ import unittest
 import copy
 from typing import *
 from firetracker import FireTracker
+import matplotlib.pyplot as plt
 
 class TestFireTracker(FireTracker):
 
@@ -14,7 +15,7 @@ class TestFireTracker(FireTracker):
 
 class FireUnitTesting(unittest.TestCase):
 
-    test_fires = [
+    test_fires_template = [
         {
             'attributes': {
                 'poly_GISAcres': 50,
@@ -22,9 +23,7 @@ class FireUnitTesting(unittest.TestCase):
                 'irwin_PercentContained': 95,
             },
             'geometry': {
-                'rings': [
-                    [[ -107.460916, 38.070289], [ -107.556031, 38.070289], [ -107.556031, 38.135239], [ -107.460916, 38.135239]]
-                ]
+                'rings': []
             }
         },
         {
@@ -34,15 +33,39 @@ class FireUnitTesting(unittest.TestCase):
                 'irwin_PercentContained': 95,
             },
             'geometry': {
-                'rings': [
-                    [[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]
-                ]
+                'rings': []
             }
         }
     ]
+    
+    test_fires_ct = [
+        [[ -107.460916, 38.070289], [ -107.556031, 38.070289], [ -107.556031, 38.135239], [ -107.460916, 38.135239]],
+        [[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]
+    ]
+
+    test_fires_pnt = [
+        [[-118.590821, 49.271898], [-118.594940, 49.036579], [-118.231018, 49.219901], [-118.232392, 49.027575]],
+        [[-114.477539, 49.038410], [-114.435321, 48.271664], [-113.113007, 48.349559], [-113.192346, 48.941153]]
+    ]
+
+    test_fires_azt = [
+        [[ -112.159124, 33.184167], [ -111.920172, 33.722682], [ -111.705938, 33.193361]],
+        [[ -110.898443, 32.451605], [ -110.875784, 32.361460], [ -110.720259, 32.360009], [ -110.720259, 32.457109]]
+    ]
+
+    test_fires_pct = [
+        [[47.532033, -121.607023], [47.265432, -121.610801], [47.356368, -121.193327]],
+        [[40.819048, -122.173511], [40.513852, -122.178234], [40.490152, -121.740926], [40.756833, -121.798541]]
+    ]
+
+    def fill_test_fires(self, fires: List[List[List[float]]]) -> List[object]:
+        test_fires = copy.deepcopy(self.test_fires_template)
+        test_fires[0]['geometry']['rings'] = [fires[0]]
+        test_fires[1]['geometry']['rings'] = [fires[1]]
+        return test_fires
 
     def test_add_fires(self) -> None:
-        tracker = TestFireTracker('CT', self.test_fires)
+        tracker = TestFireTracker('CT',  self.fill_test_fires(self.test_fires_ct))
         try:
             self.assertTrue(len(tracker.state_fires) == 2)
             print('test_add_fires PASSED: test fires were added to state fires.')
@@ -50,7 +73,7 @@ class FireUnitTesting(unittest.TestCase):
             print('test_add_fires FAILED: test fires was were added to state fires.')
     
     def test_fire_not_crossing_trail(self) -> None:
-        tracker = TestFireTracker('CT', self.test_fires)
+        tracker = TestFireTracker('CT',  self.fill_test_fires(self.test_fires_ct))
         try:
             self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥' and fire not in tracker.fires_crossing_trail for fire in tracker.state_fires))
             print('test_fire_not_crossing_trail PASSED: test fire was not crossing trail.')
@@ -58,7 +81,7 @@ class FireUnitTesting(unittest.TestCase):
             print('test_fire_not_crossing_trail FAILED: test fire was crossing the trail.')
 
     def test_fire_crossing_trail(self) -> None:
-        tracker = TestFireTracker('CT', self.test_fires)
+        tracker = TestFireTracker('CT', self.fill_test_fires(self.test_fires_ct))
         try:
             self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥' for fire in tracker.fires_crossing_trail))
             print('test_fire_crossing_trail PASSED: test fire was crossing trail.')
@@ -66,10 +89,10 @@ class FireUnitTesting(unittest.TestCase):
             print('test_fire_crossing_trail FAILED: test fire was not crossing the trail.')
     
     def test_sms(self) -> None:
-        tracker = TestFireTracker('CT', self.test_fires)
+        tracker = TestFireTracker('CT', self.fill_test_fires(self.test_fires_ct))
         tracker.create_SMS()
         try:
-            self.assertTrue('crosses the CT at mi. 103 to mi. 121' in tracker.text)
+            self.assertTrue('crosses the CT at mi. 111 to mi. 139' in tracker.text)
             print(f'test_sms PASSED: sms created\n\n{tracker.text}')
         except AssertionError:
             print('test_sms FAILED: sms not created')
