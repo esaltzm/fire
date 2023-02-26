@@ -73,19 +73,6 @@ class FireTracker():
         c = 2 * asin(sqrt(a))
         return R * c
 
-    # Finds closest point in a fire to the trail if not crossing
-    def closest(self, trail_coords: List[List[float]], fire_coords: List[List[float]]) -> List[float]:
-        comparisons = []
-        for fire_coord in fire_coords:
-            for trail_coord in trail_coords:
-                d = self.getdistance(fire_coord[0],fire_coord[1],trail_coord[0],trail_coord[1])
-                comparisons.append({
-                    'distance': d,
-                    'fire_coord': fire_coord,
-                    'trail_coord': trail_coord
-                })
-        return sorted(comparisons, key=lambda x: x['distance'])[0]
-
     # Finds closest mile marker to an intersection of the trail and a fire perimeter
     def approx_mile_marker(self, intersection: List[float], trail_coords: List[List[float]]) -> List[float]:
         least_dist = float('inf')
@@ -197,20 +184,34 @@ class FireTracker():
             if len(low_res) == n:
                 break
         return low_res
+
+    # Finds closest point in a fire to the trail if not crossing
+    def closest_point(self, trail_coords: List[List[float]], fire_coords: List[List[float]]) -> List[float]:
+        comparisons = []
+        for fire_coord in fire_coords:
+            for trail_coord in trail_coords:
+                d = self.getdistance(fire_coord[0],fire_coord[1],trail_coord[0],trail_coord[1])
+                comparisons.append({
+                    'distance': d,
+                    'fire_coord': fire_coord,
+                    'trail_coord': trail_coord
+                })
+        return sorted(comparisons, key=lambda x: x['distance'])[0]
         
     def get_closest_points(self, trail: LineString, fires: List[object]) -> List[object]:
         closest_points = []
         trail_coords = list(trail.coords)
         for fire in fires:
-            fire_coords = list(fire['shape'].exterior.coords)
-            distancebetween = []
-            for i in range(len(fire_coords) - 1):
-                distancebetween.append(self.getdistance(fire_coords[i][0], fire_coords[i][1], fire_coords[i+1][0], fire_coords[i+1][1]))
-            low_res_trail = self.reduce_if_greater(trail_coords, 2000)
-            low_res_fire = self.reduce_if_greater(fire_coords, 5000)
-            closest_points.append(self.closest(low_res_trail, low_res_fire))
+            if not trail.intersects(fire['shape']):
+                fire_coords = list(fire['shape'].exterior.coords)
+                low_res_trail = self.reduce_if_greater(trail_coords, 2000)
+                low_res_fire = self.reduce_if_greater(fire_coords, 5000)
+                closest_point = self.closest_point(low_res_trail, low_res_fire)
+                closest_point['name'] = fire['attributes']['name']
+                closest_points.append(closest_point)
         return closest_points
         # closest_points = list of {
+        #     'name': fire['attributes']['name']
         #     'distance': d,
         #     'fire_coord': fire_coord,
         #     'trail_coord': trail_coord
@@ -232,10 +233,16 @@ class FireTracker():
                 text += str(containment) + '% contained'
             text += '\n'
         self.text += text
+    
+    def text_add_closest_points(self) -> None:
+        text = '\n'
+        for point in self.closest_points:
+            text += f"The {point['name']} Fire is {point['distance']} mi. from the {self.trail} at mile marker {self.trail_mile_markers[self.approx_mile_marker(point['trail_coord'],list(self.trail_mile_markers.keys()))]}\n"
+        self.text += text
 
     def text_add_fires_crossing_trail(self) -> None:
-        text = ''
-        text += f'\n{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
+        text = '\n'
+        text += f'{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:
             cross_points = fire['intersection']
             start = cross_points[0]
@@ -251,6 +258,7 @@ class FireTracker():
     def create_SMS(self) -> bool:
         try:
             self.text_add_state_fires()
+            self.text_add_closest_points()
             self.text_add_fires_crossing_trail()
             return True
         except:
