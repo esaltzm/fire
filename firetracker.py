@@ -10,22 +10,6 @@ import gpxpy
 from geopy import distance
 from sklearn.neighbors import NearestNeighbors
 from math import radians, cos, sin, asin, sqrt
-
-import os
-from flask import Flask, request
-from twilio.twiml.messaging_response import MessagingResponse
-
-app = Flask(__name__)
-if os.environ.get('mode') == 'dev':
-    DEBUG = True
-    DEVELOPMENT = True
-    LISTEN_ADDRESS = '127.0.0.1'
-    LISTEN_PORT = 5000
-else:
-    DEBUG = False
-    TESTING = False
-    LISTEN_ADDRESS = '209.94.59.175'
-    LISTEN_PORT = 5000
             
 class FireTracker():
     def __init__(self, trail: str) -> None:
@@ -61,7 +45,7 @@ class FireTracker():
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.state_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
     
-    def plot(self):
+    def plot(self) -> None:
         y, x = self.trail_linestring.xy
         plt.plot(x, y, color='green')
         for fire in self.state_fires:
@@ -136,14 +120,14 @@ class FireTracker():
         coords = self.remove_distant_points(coords)
         return LineString(coords)
 
-    def remove_distant_points(self, coords):
+    def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
         new_coords = []
         prev_lat, prev_lon = None, None
         for lat, lon in coords:
             if prev_lat is not None and prev_lon is not None:
                 dist = distance.distance((prev_lat, prev_lon), (lat, lon)).miles
                 if dist > 300:
-                    continue  # Skip this point if it's more than 10 miles from the previous point
+                    continue
             new_coords.append((lat, lon))
             prev_lat, prev_lon = lat, lon
         return new_coords
@@ -267,23 +251,3 @@ class FireTracker():
     def create_SMS(self):
         self.text_add_state_fires()
         self.text_add_fires_crossing_trail()
-
-# ct = FireTracker('CT')
-# ct.create_SMS()
-# print(ct.text)
-
-
-# @app.route('/sms', methods=['POST'])
-
-# def sms_reply():
-#     resp = MessagingResponse()
-#     resp.message(text)
-#     return str(resp)
-
-# if __name__ == '__main__':
-#     app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
-
-# # TO DO :
-# # refactor
-# # create test fire data to check refactoring
-# # assemble trail data 
