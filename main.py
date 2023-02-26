@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 from firetracker import FireTracker
@@ -15,11 +16,33 @@ else:
     LISTEN_ADDRESS = '209.94.59.175'
     LISTEN_PORT = 5000
 
-@app.route('/sms', methods=['POST'])
+trail_names = {
+    'PCT': 'PCT',
+    'Pacific Crest Trail': 'PCT',
+    'CT': 'CT',
+    'Colorado Trail': 'CT',
+    'PNT': 'PNT',
+    'Pacific Northwest Trail': 'PNT',
+    'AZT': 'AZT',
+    'Arizona Trail': 'AZT',
+    'CDT': 'CDT',
+    'Continental Divide Trail': 'CDT'
+}
 
+trail_pattern = re.compile('|'.join(trail_names.keys()), re.IGNORECASE)
+
+@app.route('/sms', methods=['POST'])
 def sms_reply():
     resp = MessagingResponse()
-    resp.message('reply')
+    message = request.values.get('Body', '').strip()
+    match = trail_pattern.search(message)
+    if match:
+        trail = match.group(0).upper()
+        tracker = FireTracker(trail)
+        tracker.create_SMS()
+        resp.message(tracker.text)
+    else:
+        resp.message('Sorry, we could not find a supported trail name in your message.\nPlease enter one of the following: PCT, CT, AZT, PNT, or CDT\nMore trails are forthcoming!')
     return str(resp)
 
 if __name__ == '__main__':
