@@ -39,8 +39,8 @@ def sms_reply():
     if match:
         trail = match.group(0).upper()
         tracker = FireTracker(trail)
-        tracker.create_SMS()
-        resp.message(tracker.text)
+        success = tracker.create_SMS()
+        resp.message(tracker.text) if success else resp.message('Internal server error - try again later.')
     else:
         resp.message('Sorry, we could not find a supported trail name in your message.\nPlease enter one of the following: PCT, CT, AZT, PNT, or CDT\nMore trails are forthcoming!')
     return str(resp)

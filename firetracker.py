@@ -248,6 +248,10 @@ class FireTracker():
             text += '\n'
         self.text += text
 
-    def create_SMS(self):
-        self.text_add_state_fires()
-        self.text_add_fires_crossing_trail()
+    def create_SMS(self) -> bool:
+        try:
+            self.text_add_state_fires()
+            self.text_add_fires_crossing_trail()
+            return True
+        except:
+            return False
