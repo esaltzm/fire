@@ -65,6 +65,15 @@ class FireUnitTesting(unittest.TestCase):
         test_fires[0]['geometry']['rings'] = [fires[0]]
         test_fires[1]['geometry']['rings'] = [fires[1]]
         return test_fires
+    
+    def test_mile_markers(self) -> None:
+        tracker = TestFireTracker(self.trail,  self.fill_test_fires(self.test_fires[self.trail]))
+        mile_markers = list(tracker.trail_mile_markers.values())
+        try:
+            self.assertTrue(mile_markers[0] < 1)
+            print(f'test_mile_markers PASSED: first mile marker expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
+        except AssertionError:
+            print(f'test_mile_markers FAILED: first mile marker larger than expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
 
     def test_add_fires(self) -> None:
         tracker = TestFireTracker(self.trail,  self.fill_test_fires(self.test_fires[self.trail]))
