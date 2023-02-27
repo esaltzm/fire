@@ -2,7 +2,7 @@ import requests
 import threading
 import matplotlib.pyplot as plt
 from typing import *
-from shapely.geometry import LineString, Polygon, Point
+from shapely.geometry import LineString, Polygon, Point, MultiPolygon
 from shapely.ops import linemerge
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -55,6 +55,7 @@ class FireTracker():
             x, y = border.exterior.xy
             plt.plot(x, y, color='grey')
         plt.axis('equal')
+        plt.show()
         plt.savefig(f'{self.trail}_fires.png')
 
     def call_fire_api(self) -> List[object]:
@@ -83,6 +84,18 @@ class FireTracker():
                 least_dist = d
                 closest_point = trail_coord
         return closest_point
+    
+    # Used to reduce state with multiple borders (ex. California with islands) to just main state border
+    def get_largest_polygon(self, multipolygon: List[Polygon]) -> Polygon:
+        largest_area = 0
+        largest_polygon = None
+        for polygon in multipolygon:
+            if isinstance(polygon, Polygon):
+                area = polygon.area
+                if area > largest_area:
+                    largest_area = area
+                    largest_polygon = polygon
+        return largest_polygon
 
     # Retrieve state border data as a Shapely polygon
     def get_border(self, state: str) -> Polygon:
@@ -91,9 +104,10 @@ class FireTracker():
         borders = borders[['NAME', 'geometry']]
         borders = borders.set_index('NAME')
         state_border = borders.loc[state]
-        if isinstance(state_border, gpd.GeoSeries):
-            raise ValueError(f'State {state} has multiple borders')
-        return state_border.geometry
+        polygon = state_border.geometry
+        if isinstance(polygon, MultiPolygon):
+            polygon = self.get_largest_polygon(polygon.geoms)
+        return polygon
 
     # Convert trail data to Shapely linestring
     def get_trail_linestring(self, filename: str) -> LineString:
@@ -104,20 +118,26 @@ class FireTracker():
             for segment in track.segments:
                 for point in segment.points:
                     coords.insert(0, (point.latitude, point.longitude))
-        coords = self.remove_distant_points(coords)
+        # coords = self.remove_distant_points(coords)
+        if self.trail in ['PCT', 'AZT']: coords.reverse()
         return LineString(coords)
 
-    def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
-        new_coords = []
-        prev_lat, prev_lon = None, None
-        for lat, lon in coords:
-            if prev_lat is not None and prev_lon is not None:
-                dist = distance.distance((prev_lat, prev_lon), (lat, lon)).miles
-                if dist > 300:
-                    continue
-            new_coords.append((lat, lon))
-            prev_lat, prev_lon = lat, lon
-        return new_coords
+    # def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
+    #     new_coords = []
+    #     prev_lat, prev_lon = None, None
+    #     for lat, lon in coords:
+    #         if prev_lat is not None and prev_lon is not None:
+    #             dist = self.getdistance(prev_lat, prev_lon, lat, lon)
+    #             while dist > 1:
+    #                 # If the distance between consecutive points is greater than 1,
+    #                 # we need to remove the previous point and re-calculate the distance
+    #                 coords.pop(coords.index([prev_lat, prev_lon]))
+    #                 prev_lat, prev_lon = coords[-1]
+    #                 dist = self.getdistance(prev_lat, prev_lon, lat, lon)
+    #         new_coords.append([lat, lon])
+    #         prev_lat, prev_lon = lat, lon
+    #     return new_coords
+
 
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
     def get_mile_markers(self, trail: LineString) -> dict:

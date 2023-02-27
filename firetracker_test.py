@@ -1,6 +1,7 @@
 import unittest
 import copy
 from typing import *
+import sys
 from firetracker import FireTracker
 import matplotlib.pyplot as plt
 
@@ -15,7 +16,7 @@ class TestFireTracker(FireTracker):
 
 class FireUnitTesting(unittest.TestCase):
 
-    trail = 'AZT'
+    trail = 'PCT'
 
     test_fires_template = [
         {
@@ -54,8 +55,8 @@ class FireUnitTesting(unittest.TestCase):
             [[ -110.898443, 32.451605], [ -110.875784, 32.361460], [ -110.720259, 32.360009], [ -110.720259, 32.457109]]
         ],
         'PCT': [
-            [[47.532033, -121.607023], [47.265432, -121.610801], [47.356368, -121.193327]],
-            [[40.819048, -122.173511], [40.513852, -122.178234], [40.490152, -121.740926], [40.756833, -121.798541]]
+            [[-122.173511, 40.819048], [-122.178234, 40.513852], [-121.740926, 40.490152], [-121.798541, 40.756833]],
+            [[-121.607023, 47.532033], [-121.610801, 47.265432], [-121.193327, 47.356368]]
         ]
     }
 
@@ -71,7 +72,7 @@ class FireUnitTesting(unittest.TestCase):
             self.assertTrue(len(tracker.state_fires) == 2)
             print('.test_add_fires PASSED: test fires were added to state fires.')
         except AssertionError:
-            print('test_add_fires FAILED: test fires was were added to state fires.')
+            print('test_add_fires FAILED: test fires were not added to state fires.')
     
     def test_fire_not_crossing_trail(self) -> None:
         tracker = TestFireTracker(self.trail,  self.fill_test_fires(self.test_fires[self.trail]))
