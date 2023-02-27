@@ -237,7 +237,8 @@ class FireTracker():
     def text_add_closest_points(self) -> None:
         text = '\n'
         for point in self.closest_points:
-            text += f"The {point['name']} Fire is {point['distance']} mi. from the {self.trail} at mile marker {self.trail_mile_markers[self.approx_mile_marker(point['trail_coord'],list(self.trail_mile_markers.keys()))]}\n"
+            mile_marker = self.trail_mile_markers[self.approx_mile_marker(point['trail_coord'],list(self.trail_mile_markers.keys()))]
+            text += f"The {point['name']} Fire is {round(point['distance'])} mi. from the {self.trail} at mile marker {round(mile_marker)}\n"
         self.text += text
 
     def text_add_fires_crossing_trail(self) -> None:
