@@ -1,7 +1,6 @@
 import unittest
 import copy
 from typing import *
-import sys
 from firetracker import FireTracker
 import matplotlib.pyplot as plt
 
@@ -16,7 +15,7 @@ class TestFireTracker(FireTracker):
 
 class FireUnitTesting(unittest.TestCase):
 
-    trail = 'PCT'
+    trail = 'CDT'
 
     test_fires_template = [
         {
@@ -47,7 +46,7 @@ class FireUnitTesting(unittest.TestCase):
             [[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]
         ],
         'PNT': [
-            [[-118.590821, 49.271898], [-118.594940, 49.036579], [-118.231018, 49.219901], [-118.232392, 49.027575]],
+            [[-120.264561, 48.098639], [-120.264561, 47.348513], [-118.880284, 47.329900], [-118.902256, 48.039908]],
             [[-114.477539, 49.038410], [-114.435321, 48.271664], [-113.113007, 48.349559], [-113.192346, 48.941153]]
         ],
         'AZT': [
@@ -57,6 +56,10 @@ class FireUnitTesting(unittest.TestCase):
         'PCT': [
             [[-122.173511, 40.819048], [-122.178234, 40.513852], [-121.740926, 40.490152], [-121.798541, 40.756833]],
             [[-121.607023, 47.532033], [-121.610801, 47.265432], [-121.193327, 47.356368]]
+        ],
+        'CDT': [
+            [[ -108.067945, 45.055377],[-108.130315, 44.006080],[-106.443914, 44.057421],[-106.471379, 45.051626]],
+            [[ -107.289151, 36.443293],[-106.684903, 37.168985],[-105.668668, 36.044569]]
         ]
     }
 
@@ -77,6 +80,7 @@ class FireUnitTesting(unittest.TestCase):
 
     def test_add_fires(self) -> None:
         tracker = TestFireTracker(self.trail,  self.fill_test_fires(self.test_fires[self.trail]))
+        tracker.plot()
         try:
             self.assertTrue(len(tracker.state_fires) == 2)
             print('.test_add_fires PASSED: test fires were added to state fires.')

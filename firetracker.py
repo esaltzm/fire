@@ -1,14 +1,12 @@
 import requests
-import threading
+import traceback
 import matplotlib.pyplot as plt
-from typing import *
-from shapely.geometry import LineString, Polygon, Point, MultiPolygon
-from shapely.ops import linemerge
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import gpxpy
-from geopy import distance
-from sklearn.neighbors import NearestNeighbors
+from typing import *
+from shapely.geometry import LineString, Polygon, Point, MultiPolygon
+from shapely.ops import linemerge
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
@@ -17,22 +15,27 @@ class FireTracker():
         self.trail = trail
         self.trail_list = {
             'CT': {
+                'name': 'Colorado Trail',
                 'states': ['Colorado'],
                 'data': 'gpx_files/Colorado_Trail.gpx'
             },
             'PCT': {
+                'name': 'Pacific Crest Trail',
                 'states': ['California', 'Oregon', 'Washington'],
                 'data': 'gpx_files/Pacific_Crest_Trail.gpx'
             },
             'CDT': {
+                'name': 'Continental Divide Trail',
                 'states': ['New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
                 'data': 'gpx_files/Continental_Divide_Trail.gpx'
             },
             'PNT': {
+                'name': 'Pacific Northwest Trail',
                 'states': ['Montana', 'Idaho', 'Washington'],
                 'data': 'gpx_files/Pacific_Northwest_Trail.gpx'
             },
             'AZT': {
+                'name': 'Arizona Trail',
                 'states': ['Arizona'],
                 'data': 'gpx_files/Arizona_Trail.gpx'
             }
@@ -46,16 +49,15 @@ class FireTracker():
         self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
     
     def plot(self) -> None:
+        for border in self.state_border_polygons:
+            x, y = border.exterior.xy
+            plt.plot(x, y, color='grey')
         y, x = self.trail_linestring.xy
         plt.plot(x, y, color='green')
         for fire in self.state_fires:
             y, x = fire['shape'].exterior.xy
             plt.fill(x, y, color='red')
-        for border in self.state_border_polygons:
-            x, y = border.exterior.xy
-            plt.plot(x, y, color='grey')
         plt.axis('equal')
-        plt.show()
         plt.savefig(f'{self.trail}_fires.png')
 
     def call_fire_api(self) -> List[object]:
@@ -119,24 +121,19 @@ class FireTracker():
                 for point in segment.points:
                     coords.insert(0, (point.latitude, point.longitude))
         # coords = self.remove_distant_points(coords)
-        if self.trail in ['PCT', 'AZT']: coords.reverse()
+        if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
         return LineString(coords)
 
-    # def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
-    #     new_coords = []
-    #     prev_lat, prev_lon = None, None
-    #     for lat, lon in coords:
-    #         if prev_lat is not None and prev_lon is not None:
-    #             dist = self.getdistance(prev_lat, prev_lon, lat, lon)
-    #             while dist > 1:
-    #                 # If the distance between consecutive points is greater than 1,
-    #                 # we need to remove the previous point and re-calculate the distance
-    #                 coords.pop(coords.index([prev_lat, prev_lon]))
-    #                 prev_lat, prev_lon = coords[-1]
-    #                 dist = self.getdistance(prev_lat, prev_lon, lat, lon)
-    #         new_coords.append([lat, lon])
-    #         prev_lat, prev_lon = lat, lon
-    #     return new_coords
+    def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
+        filtered_coords = [coords[0]]
+        for i in range(1, len(coords)):
+            prev_coord = filtered_coords[-1]
+            curr_coord = coords[i]
+            dist = self.getdistance(prev_coord[0], prev_coord[1], curr_coord[0], curr_coord[1])
+            if dist > 10:
+                continue
+            filtered_coords.append(curr_coord)
+        return filtered_coords
 
 
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
@@ -243,14 +240,14 @@ class FireTracker():
         for fire in self.state_fires:
             attributes = fire['attributes']
             text += f"{attributes['name']} Fire"
-            area = round(attributes['acres'])
-            containment = round(attributes['containment'])
+            area = attributes['acres']
+            containment = attributes['containment']
             if area or containment: text += ' - '
             if area:
-                text += str(area) + ' acres'
+                text += str(round(area)) + ' acres'
                 if containment: text += ', '
             if containment:
-                text += str(containment) + '% contained'
+                text += str(round(containment)) + '% contained'
             text += '\n'
         self.text += text
     
@@ -282,5 +279,6 @@ class FireTracker():
             self.text_add_closest_points()
             self.text_add_fires_crossing_trail()
             return True
-        except:
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
             return False
