@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import gpxpy
+import pyproj
 from typing import *
 from shapely.geometry import LineString, Polygon, Point, MultiPolygon
-from shapely.ops import linemerge
+from shapely.ops import transform
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
@@ -121,22 +122,22 @@ class FireTracker():
             for segment in track.segments:
                 for point in segment.points:
                     coords.insert(0, (point.latitude, point.longitude))
-        # coords = self.remove_distant_points(coords)
         if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
         return LineString(coords)
 
-    def remove_distant_points(self, coords: List[List[float]]) -> List[List[float]]:
-        filtered_coords = [coords[0]]
-        for i in range(1, len(coords)):
-            prev_coord = filtered_coords[-1]
-            curr_coord = coords[i]
-            dist = self.getdistance(prev_coord[0], prev_coord[1], curr_coord[0], curr_coord[1])
-            if dist > 10:
-                continue
-            filtered_coords.append(curr_coord)
-        return filtered_coords
-
-
+    def get_trail_buffer(self, trail: LineString, miles: int = 100) -> Polygon:
+        wgs84 = pyproj.CRS('EPSG:4326')
+        utm_proj = pyproj.CRS('EPSG:32610')
+        transformer = pyproj.Transformer.from_crs(wgs84, utm_proj, always_xy=True)
+        projected = transform(transformer.transform, trail)
+        buffer_meters = miles * 1609.344  # 1 mile = 1609.344 meters
+        buffered_projected = projected.buffer(buffer_meters)
+        buffered_wgs84 = transform(transformer.transform, buffered_projected)
+        if isinstance(buffered_wgs84, Polygon):
+            return buffered_wgs84
+        else:
+            return buffered_wgs84[0]
+    
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
     def get_mile_markers(self, trail: LineString) -> dict:
         mile_markers = {}

@@ -5,11 +5,11 @@ from twilio.twiml.messaging_response import MessagingResponse
 from firetracker import FireTracker
 
 app = Flask(__name__)
-if os.environ.get('mode') == 'dev':
+if os.environ.get('FLASK_ENV') == 'development':
     DEBUG = True
     DEVELOPMENT = True
     LISTEN_ADDRESS = '127.0.0.1'
-    LISTEN_PORT = 5000
+    LISTEN_PORT = 8080
 else:
     DEBUG = False
     TESTING = False
@@ -31,10 +31,14 @@ trail_names = {
 
 trail_pattern = re.compile('|'.join(trail_names.keys()), re.IGNORECASE)
 
-@app.route('/sms', methods=['POST'])
+@app.route('/test', methods=['GET'])
+def test():
+    return 'testing'
+
+@app.route('/sms', methods=['GET'])
 def sms_reply():
     resp = MessagingResponse()
-    message = request.values.get('Body', '').strip()
+    message = request.form.get('Body', '').strip()
     match = trail_pattern.search(message)
     if match:
         trail = match.group(0).upper()

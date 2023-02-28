@@ -13,5 +13,5 @@ class prod(Base):
     TESTING = False
     DATABASE_URI = 'mysql+mysqldb://root:root@prod_host_name/demo_prod'
     LISTEN_ADDRESS = '209.94.59.175'
-    LISTEN_PORT = 5000
+    LISTEN_PORT = 8080
 
