@@ -4,30 +4,30 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import gpxpy
-import pyproj
+from geopy import distance
 from typing import *
 from shapely.geometry import LineString, Polygon, Point, MultiPolygon
-from shapely.ops import transform
+from shapely.ops import unary_union
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
     def __init__(self, trail: str) -> None:
         self.text = ''
         self.trail = trail
-        self.trail_list = {
+        self.trail_list = { # 'states' includes states within 50 miles of trail
             'CT': {
                 'name': 'Colorado Trail',
-                'states': ['Colorado'],
+                'states': ['Colorado', 'New Mexico'],
                 'data': 'gpx_files/Colorado_Trail.gpx'
             },
             'PCT': {
                 'name': 'Pacific Crest Trail',
-                'states': ['California', 'Oregon', 'Washington'],
+                'states': ['California', 'Nevada', 'Oregon', 'Washington'],
                 'data': 'gpx_files/Pacific_Crest_Trail.gpx'
             },
             'CDT': {
                 'name': 'Continental Divide Trail',
-                'states': ['New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
+                'states': ['Arizona', 'New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
                 'data': 'gpx_files/Continental_Divide_Trail.gpx'
             },
             'PNT': {
@@ -37,28 +37,34 @@ class FireTracker():
             },
             'AZT': {
                 'name': 'Arizona Trail',
-                'states': ['Arizona'],
+                'states': ['Arizona', 'Utah'],
                 'data': 'gpx_files/Arizona_Trail.gpx'
             }
         }
         self.trail_linestring = self.get_trail_linestring(self.trail_list[trail]['data'])
+        self.trail_buffer = self.get_trail_buffer(self.trail_linestring)
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
-        self.state_fires = self.get_state_fires(self.state_border_polygons)
-        self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.state_fires)
-        self.closest_points = self.get_closest_points(self.trail_linestring, self.state_fires)
+        # self.state_fires = self.get_state_fires(self.state_border_polygons)
+        self.close_fires = self.get_close_fires(self.trail_buffer)
+        self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.close_fires)
+        self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
     
     def plot(self) -> None:
-        plt.clf()
+        # plt.clf()
         for border in self.state_border_polygons:
-            x, y = border.exterior.xy
+            x, y = border['border'].exterior.xy
             plt.plot(x, y, color='grey')
         y, x = self.trail_linestring.xy
         plt.plot(x, y, color='green')
-        for fire in self.state_fires:
+        y, x = self.trail_buffer.exterior.xy
+        plt.plot(x, y, color='blue')
+        for fire in self.close_fires:
             y, x = fire['shape'].exterior.xy
             plt.fill(x, y, color='red')
+            centroid = fire['shape'].centroid
+            plt.text(centroid.y + 1, centroid.x, fire['attributes']['name'])
         plt.axis('equal')
         plt.savefig(f'{self.trail}_fires.png')
 
@@ -102,7 +108,7 @@ class FireTracker():
         return largest_polygon
 
     # Retrieve state border data as a Shapely polygon
-    def get_border(self, state: str) -> Polygon:
+    def get_border(self, state: str) -> object:
         borders = gpd.read_file('./state_borders/tl_2022_us_state.shp')
         borders = borders.to_crs(epsg=4326)
         borders = borders[['NAME', 'geometry']]
@@ -111,7 +117,10 @@ class FireTracker():
         polygon = state_border.geometry
         if isinstance(polygon, MultiPolygon):
             polygon = self.get_largest_polygon(polygon.geoms)
-        return polygon
+        return {
+            'state': state,
+            'border': polygon
+        }
 
     # Convert trail data to Shapely linestring
     def get_trail_linestring(self, filename: str) -> LineString:
@@ -125,18 +134,8 @@ class FireTracker():
         if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
         return LineString(coords)
 
-    def get_trail_buffer(self, trail: LineString, miles: int = 100) -> Polygon:
-        wgs84 = pyproj.CRS('EPSG:4326')
-        utm_proj = pyproj.CRS('EPSG:32610')
-        transformer = pyproj.Transformer.from_crs(wgs84, utm_proj, always_xy=True)
-        projected = transform(transformer.transform, trail)
-        buffer_meters = miles * 1609.344  # 1 mile = 1609.344 meters
-        buffered_projected = projected.buffer(buffer_meters)
-        buffered_wgs84 = transform(transformer.transform, buffered_projected)
-        if isinstance(buffered_wgs84, Polygon):
-            return buffered_wgs84
-        else:
-            return buffered_wgs84[0]
+    def get_trail_buffer(self, trail: LineString) -> Polygon:
+        return trail.buffer(50/69) # Approximate degrees per 50 mile radius
     
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
     def get_mile_markers(self, trail: LineString) -> dict:
@@ -153,23 +152,44 @@ class FireTracker():
         p = Point(coord[1], coord[0])
         return any(border.contains(p) for border in borders)
 
-    def get_state_fires(self, borders: List[Polygon]) -> List[object]:
+    # def get_state_fires(self, borders: List[Polygon]) -> List[object]:
+    #     current_fires = self.call_fire_api()
+    #     state_fires = []
+    #     for fire in current_fires:
+    #         coords = self.switch_xy(fire['geometry']['rings'][0])
+    #         for coord in coords:
+    #             if self.is_in_state(coord, borders):
+    #                 state_fires.append({
+    #                     'attributes': {
+    #                         'name': fire['attributes']['irwin_IncidentName'],
+    #                         'acres': fire['attributes']['poly_GISAcres'],
+    #                         'containment': fire['attributes']['irwin_PercentContained']
+    #                     },
+    #                     'shape': Polygon(coords)
+    #                 })
+    #                 break
+    #     return state_fires
+    
+    def get_close_fires(self, buffer: Polygon) -> List[object]:
         current_fires = self.call_fire_api()
-        state_fires = []
+        close_fires = []
         for fire in current_fires:
-            coords = self.switch_xy(fire['geometry']['rings'][0])
-            for coord in coords:
-                if self.is_in_state(coord, borders):
-                    state_fires.append({
-                        'attributes': {
-                            'name': fire['attributes']['irwin_IncidentName'],
-                            'acres': fire['attributes']['poly_GISAcres'],
-                            'containment': fire['attributes']['irwin_PercentContained']
-                        },
-                        'shape': Polygon(coords)
-                    })
-                    break
-        return state_fires
+            fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
+            if fire_shape.overlaps(buffer):
+                for state_border in self.state_border_polygons:
+                    if fire_shape.overlaps(state_border['border']):
+                        state = state_border['state']
+                    else: state = 'non U.S.'
+                close_fires.append({
+                    'attributes': {
+                        'name': fire['attributes']['irwin_IncidentName'],
+                        'state': state,
+                        'acres': fire['attributes']['poly_GISAcres'],
+                        'containment': fire['attributes']['irwin_PercentContained']
+                    },
+                    'shape': fire_shape
+                })
+        return close_fires
 
     def switch_xy(self, points: List[List[float]]) -> List[List[float]]:
         for point in points:
@@ -236,12 +256,12 @@ class FireTracker():
         #     'trail_coord': trail_coord
         # } for each fire
     
-    def text_add_state_fires(self) -> None:
+    def text_add_close_fires(self) -> None:
         text = ''
-        text += f"Total fires in {', '.join(self.states)}: {len(self.state_fires)}\n"
-        for fire in self.state_fires:
+        text += f"Total fires within 50 miles of the {self.trail}: {len(self.close_fires)}\n"
+        for fire in self.close_fires:
             attributes = fire['attributes']
-            text += f"{attributes['name']} Fire"
+            text += f"{attributes['name']} Fire ({attributes['state']})"
             area = attributes['acres']
             containment = attributes['containment']
             if area or containment: text += ' - '
@@ -277,7 +297,7 @@ class FireTracker():
 
     def create_SMS(self) -> bool:
         try:
-            self.text_add_state_fires()
+            self.text_add_close_fires()
             self.text_add_closest_points()
             self.text_add_fires_crossing_trail()
             return True

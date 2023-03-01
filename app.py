@@ -1,11 +1,13 @@
 import os
 import re
+import time
+import threading
+from firetracker import FireTracker
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from firetracker import FireTracker
 
 app = Flask(__name__)
-if os.environ.get('FLASK_ENV') == 'development':
+if os.environ.get('FLASK_DEBUG'):
     DEBUG = True
     DEVELOPMENT = True
     LISTEN_ADDRESS = '127.0.0.1'
@@ -15,6 +17,16 @@ else:
     TESTING = False
     LISTEN_ADDRESS = '209.94.59.175'
     LISTEN_PORT = 5000
+
+err_text = 'Sorry, an error occurred while generating the fire report.\nPlease try again later.'
+
+fire_reports = {
+    'PCT': err_text,
+    'CT': err_text,
+    'PNT': err_text,
+    'AZT': err_text,
+    'CDT': err_text
+}
 
 trail_names = {
     'PCT': 'PCT',
@@ -29,25 +41,35 @@ trail_names = {
     'Continental Divide Trail': 'CDT'
 }
 
+def retrieve_reports():
+    while True:
+        for trail in fire_reports.keys():
+            tracker = FireTracker(trail)
+            success = tracker.create_SMS()
+            if success:
+                fire_reports[trail] = tracker.text
+            else:
+                fire_reports[trail] = err_text
+        time.sleep(4 * 3600) # Retrieve new reports every 4 hours
+
 trail_pattern = re.compile('|'.join(trail_names.keys()), re.IGNORECASE)
 
 @app.route('/test', methods=['GET'])
 def test():
     return 'testing'
 
-@app.route('/sms', methods=['GET'])
+@app.route('/sms', methods=['POST'])
 def sms_reply():
     resp = MessagingResponse()
     message = request.form.get('Body', '').strip()
     match = trail_pattern.search(message)
     if match:
         trail = match.group(0).upper()
-        tracker = FireTracker(trail)
-        success = tracker.create_SMS()
-        resp.message(tracker.text) if success else resp.message('Sorry, an error occurred while generating the fire report.\nPlease try again later.')
+        resp.message(fire_reports[trail_names[trail]])
     else:
         resp.message('Sorry, we could not find a supported trail name in your message.\nPlease enter one of the following: PCT, CT, AZT, PNT, or CDT\nMore trails are forthcoming!')
     return str(resp)
 
-if __name__ == '__main__':
-    app.run(host = LISTEN_ADDRESS, port = LISTEN_PORT)
+ongoing_thread = threading.Thread(target=retrieve_reports)
+ongoing_thread.start()
+app.run(host=LISTEN_ADDRESS, port=LISTEN_PORT, threaded=True, debug=False)

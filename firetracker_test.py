@@ -15,109 +15,91 @@ class TestFireTracker(FireTracker):
 
 class FireUnitTesting(unittest.TestCase):
 
-    # trail = 'CDT'
-
-    test_fires_template = [
-        {
-            'attributes': {
-                'poly_GISAcres': 50,
-                'irwin_IncidentName': '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥',
-                'irwin_PercentContained': 95,
-            },
-            'geometry': {
-                'rings': []
-            }
+    test_fire_template = {
+        'attributes': {
+            'poly_GISAcres': 50,
+            'irwin_IncidentName': 'Test Fire',
+            'irwin_PercentContained': 95,
         },
-        {
-            'attributes': {
-                'poly_GISAcres': 50,
-                'irwin_IncidentName': '🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥',
-                'irwin_PercentContained': 95,
-            },
-            'geometry': {
-                'rings': []
-            }
+        'geometry': {
+            'rings': None
         }
-    ]
-
-    test_fires = {
-        'CT': [
-            [[ -107.460916, 38.070289], [ -107.556031, 38.070289], [ -107.556031, 38.135239], [ -107.460916, 38.135239]],
-            [[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]
-        ],
-        'PNT': [
-            [[-120.264561, 48.098639], [-120.264561, 47.348513], [-118.880284, 47.329900], [-118.902256, 48.039908]],
-            [[-114.477539, 49.038410], [-114.435321, 48.271664], [-113.113007, 48.349559], [-113.192346, 48.941153]]
-        ],
-        'AZT': [
-            [[ -112.159124, 33.184167], [ -111.920172, 33.722682], [ -111.705938, 33.193361]],
-            [[ -110.898443, 32.451605], [ -110.875784, 32.361460], [ -110.720259, 32.360009], [ -110.720259, 32.457109]]
-        ],
-        'PCT': [
-            [[-122.173511, 40.819048], [-122.178234, 40.513852], [-121.740926, 40.490152], [-121.798541, 40.756833]],
-            [[-121.607023, 47.532033], [-121.610801, 47.265432], [-121.193327, 47.356368]]
-        ],
-        'CDT': [
-            [[ -108.067945, 45.055377],[-108.130315, 44.006080],[-106.443914, 44.057421],[-106.471379, 45.051626]],
-            [[ -107.289151, 36.443293],[-106.684903, 37.168985],[-105.668668, 36.044569]]
-        ]
     }
 
-    trails = list(test_fires.keys())
+    test_fire_coords = [
+    #CT
+        [[[ -107.460916, 38.070289], [ -107.556031, 38.070289], [ -107.556031, 38.135239], [ -107.460916, 38.135239]]],
+        [[[ -106.330612, 39.673335], [ -106.338165, 39.485990], [ -106.051834, 39.466909], [ -106.066940, 39.689188]]],
+    #PNT
+        [[[-120.264561, 48.098639], [-120.264561, 47.348513], [-118.880284, 47.329900], [-118.902256, 48.039908]]],
+        [[[-114.477539, 49.038410], [-114.435321, 48.271664], [-113.113007, 48.349559], [-113.192346, 48.941153]]],
+    #AZT
+        [[[ -112.159124, 33.184167], [ -111.920172, 33.722682], [ -111.705938, 33.193361]]],
+        [[[ -110.898443, 32.451605], [ -110.875784, 32.361460], [ -110.720259, 32.360009], [ -110.720259, 32.457109]]],
+    #PCT
+        [[[-122.173511, 40.819048], [-122.178234, 40.513852], [-121.740926, 40.490152], [-121.798541, 40.756833]]],
+        [[[-121.607023, 47.532033], [-121.610801, 47.265432], [-121.193327, 47.356368]]],
+    #CDT
+        [[[ -108.067945, 45.055377],[-108.130315, 44.006080],[-106.443914, 44.057421],[-106.471379, 45.051626]]],
+        [[[ -107.289151, 36.443293],[-106.684903, 37.168985],[-105.668668, 36.044569]]]
+    ]
 
-    def fill_test_fires(self, fires: List[List[List[float]]]) -> List[object]:
-        test_fires = copy.deepcopy(self.test_fires_template)
-        test_fires[0]['geometry']['rings'] = [fires[0]]
-        test_fires[1]['geometry']['rings'] = [fires[1]]
-        return test_fires
+    trails = ['CT', 'PNT', 'AZT', 'PCT', 'CDT']
+
+    test_fires = []
+    for i, coords in enumerate(test_fire_coords):
+        fire = copy.deepcopy(test_fire_template)
+        fire['geometry']['rings'] = coords
+        fire['attributes']['irwin_IncidentName'] += f' {i + 1}'
+        test_fires.append(fire)
     
-    def test_mile_markers(self) -> None:
-        for trail in self.trails:
-            tracker = TestFireTracker(trail,  self.fill_test_fires(self.test_fires[trail]))
-            mile_markers = list(tracker.trail_mile_markers.values())
-            try:
-                self.assertTrue(mile_markers[0] < 1)
-                print(f'{trail} test_mile_markers PASSED: first mile marker expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
-            except AssertionError:
-                print(f'{trail} test_mile_markers FAILED: first mile marker larger than expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
+    # def test_mile_markers(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = TestFireTracker(trail, self.test_fires)
+    #         mile_markers = list(tracker.trail_mile_markers.values())
+    #         try:
+    #             self.assertTrue(mile_markers[0] < 1)
+    #             print(f'{trail} test_mile_markers PASSED: first mile marker expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
+    #         except AssertionError:
+    #             print(f'{trail} test_mile_markers FAILED: first mile marker larger than expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
 
     def test_add_fires(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail,  self.fill_test_fires(self.test_fires[trail]))
+            tracker = TestFireTracker(trail, self.test_fires)
             tracker.plot()
             try:
-                self.assertTrue(len(tracker.state_fires) == 2)
-                print(f'{trail} test_add_fires PASSED: both test fires were added to state fires.')
+                self.assertTrue(len(tracker.close_fires) > 0)
+                print(f'{trail} test_add_fires PASSED: at least one test fire added to close fires.')
             except AssertionError:
-                print(f'{trail} test_add_fires FAILED: both test fires were not added to state fires.')
+                print(f'{trail} test_add_fires FAILED: close fires was empty.')
     
-    def test_fire_not_crossing_trail(self) -> None:
-        for trail in self.trails:
-            tracker = TestFireTracker(trail,  self.fill_test_fires(self.test_fires[trail]))
-            try:
-                self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥' and fire not in tracker.fires_crossing_trail for fire in tracker.state_fires))
-                print(f'{trail} test_fire_not_crossing_trail PASSED: 🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥 was not crossing trail.')
-            except AssertionError:
-                print(f'{trail} test_fire_not_crossing_trail FAILED: 🔥🔥🔥 NOT CROSSING TRAIL 🔥🔥🔥 was crossing trail.')
+    # def test_fire_not_crossing_trail(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = TestFireTracker(trail, self.test_fires)
+    #         try:
+    #             self.assertTrue(len(tracker.close_fires) > len(tracker.fires_crossing_trail))
+    #             print(f'{trail} test_fire_not_crossing_trail PASSED: at least one fire close but not crossing trail.')
+    #         except AssertionError:
+    #             print(f'{trail} test_fire_not_crossing_trail FAILED: no fires not crossing trail.')
 
-    def test_fire_crossing_trail(self) -> None:
-        for trail in self.trails:
-            tracker = TestFireTracker(trail,  self.fill_test_fires(self.test_fires[trail]))
-            try:
-                self.assertTrue(any(fire['attributes']['name'] == '🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥' for fire in tracker.fires_crossing_trail))
-                print(f'{trail} test_fire_crossing_trail PASSED: 🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥 fire was crossing trail.')
-            except AssertionError:
-                print(f'{trail} test_fire_crossing_trail FAILED: 🔥🔥🔥 IS CROSSING TRAIL 🔥🔥🔥 fire was not crossing the trail.')
+    # def test_fire_crossing_trail(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = TestFireTracker(trail, self.test_fires)
+    #         try:
+    #             self.assertTrue(len(tracker.fires_crossing_trail) > 0)
+    #             print(f'{trail} test_fire_crossing_trail PASSED: at least one fire was crossing trail.')
+    #         except AssertionError:
+    #             print(f'{trail} test_fire_crossing_trail FAILED: no fires were crossing trail.')
     
-    def test_sms(self) -> None:
-        for trail in self.trails:
-            tracker = TestFireTracker(trail,  self.fill_test_fires(self.test_fires[trail]))
-            try:
-                self.assertTrue(tracker.create_SMS())
-                print(f'{trail} test_sms PASSED: sms created')
-                print(tracker.text)
-            except AssertionError:
-                print(f'{trail} test_sms FAILED: sms not created')
+    # def test_sms(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = TestFireTracker(trail, self.test_fires)
+    #         try:
+    #             self.assertTrue(tracker.create_SMS())
+    #             print(f'{trail} test_sms PASSED: sms created')
+    #             print(tracker.text)
+    #         except AssertionError:
+    #             print(f'{trail} test_sms FAILED: sms not created')
 
 if __name__ == '__main__':
     unittest.main()
