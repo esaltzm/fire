@@ -46,7 +46,6 @@ class FireTracker():
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
-        # self.state_fires = self.get_state_fires(self.state_border_polygons)
         self.close_fires = self.get_close_fires(self.trail_buffer)
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.close_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
@@ -151,35 +150,20 @@ class FireTracker():
     def is_in_state(self, coord: List[float], borders: List[Polygon]) -> bool:
         p = Point(coord[1], coord[0])
         return any(border.contains(p) for border in borders)
-
-    # def get_state_fires(self, borders: List[Polygon]) -> List[object]:
-    #     current_fires = self.call_fire_api()
-    #     state_fires = []
-    #     for fire in current_fires:
-    #         coords = self.switch_xy(fire['geometry']['rings'][0])
-    #         for coord in coords:
-    #             if self.is_in_state(coord, borders):
-    #                 state_fires.append({
-    #                     'attributes': {
-    #                         'name': fire['attributes']['irwin_IncidentName'],
-    #                         'acres': fire['attributes']['poly_GISAcres'],
-    #                         'containment': fire['attributes']['irwin_PercentContained']
-    #                     },
-    #                     'shape': Polygon(coords)
-    #                 })
-    #                 break
-    #     return state_fires
     
     def get_close_fires(self, buffer: Polygon) -> List[object]:
         current_fires = self.call_fire_api()
         close_fires = []
         for fire in current_fires:
             fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
-            if fire_shape.overlaps(buffer):
+            if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
                 for state_border in self.state_border_polygons:
+                    #####
                     if fire_shape.overlaps(state_border['border']):
                         state = state_border['state']
-                    else: state = 'non U.S.'
+                    else: 
+                        state = 'non U.S.'
+                    #####
                 close_fires.append({
                     'attributes': {
                         'name': fire['attributes']['irwin_IncidentName'],
