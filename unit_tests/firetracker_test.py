@@ -1,8 +1,13 @@
 import unittest
 import copy
+import sys
+import os
 from typing import *
+
+app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, app_dir)
+
 from firetracker import FireTracker
-import matplotlib.pyplot as plt
 
 class FireUnitTesting(unittest.TestCase):
 

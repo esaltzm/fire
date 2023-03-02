@@ -64,7 +64,7 @@ class FireTracker():
             centroid = fire['shape'].centroid
             plt.text(centroid.y + 1, centroid.x, fire['attributes']['name'])
         plt.axis('equal')
-        plt.savefig(f'{self.trail}_fires.png')
+        plt.savefig(f'fire_pngs/{self.trail}_fires.png')
 
     def getdistance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         R = 3959.87433 # radius in miles
@@ -251,14 +251,14 @@ class FireTracker():
         self.text += text
     
     def text_add_closest_points(self) -> None:
-        text = '\n'
+        text = ''
         for point in self.closest_points:
             mile_marker = self.trail_mile_markers[self.approx_mile_marker(point['trail_coord'],list(self.trail_mile_markers.keys()))]
             text += f"The {point['name']} Fire is {round(point['distance'])} mi. from the {self.trail} at mile marker {round(mile_marker)}\n"
         self.text += text
 
     def text_add_fires_crossing_trail(self) -> None:
-        text = '\n'
+        text = ''
         text += f'{len(self.fires_crossing_trail)} fire(s) currently cross the {self.trail}\n'
         for fire in self.fires_crossing_trail:
             cross_points = fire['intersection']

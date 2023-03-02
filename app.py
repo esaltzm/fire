@@ -7,16 +7,19 @@ from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
-if os.environ.get('FLASK_DEBUG'):
-    DEBUG = True
-    DEVELOPMENT = True
-    LISTEN_ADDRESS = '127.0.0.1'
-    LISTEN_PORT = 8080
-else:
-    DEBUG = False
-    TESTING = False
-    LISTEN_ADDRESS = '209.94.59.175'
-    LISTEN_PORT = 5000
+# if os.environ.get('FLASK_DEBUG'):
+#     DEBUG = True
+#     DEVELOPMENT = True
+#     LISTEN_ADDRESS = '127.0.0.1'
+#     LISTEN_PORT = 8080
+# else:
+#     DEBUG = False
+#     TESTING = False
+#     LISTEN_ADDRESS = '209.94.59.175'
+#     LISTEN_PORT = 5001
+
+LISTEN_ADDRESS = '0.0.0.0'
+LISTEN_PORT = 8080
 
 err_text = 'Sorry, an error occurred while generating the fire report.\nPlease try again later.'
 
@@ -76,9 +79,10 @@ def sms_reply():
     resp = MessagingResponse()
     message = request.form.get('Body', '').strip()
     match = False
-    for name in trail_names:
+    for name in trail_names.keys():
         if name.lower() in message.lower():
             match = trail_names[name]
+            break
     if match:
         resp.message(fire_reports[match])
     else:
