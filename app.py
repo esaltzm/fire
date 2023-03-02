@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import requests
 import threading
 from firetracker import FireTracker
 from flask import Flask, request
@@ -42,9 +43,13 @@ trail_names = {
 }
 
 def retrieve_reports():
+    api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
     while True:
+        response = requests.get(api_url)
+        data = response.json()
+        current_fires = data['features']
         for trail in fire_reports.keys():
-            tracker = FireTracker(trail)
+            tracker = FireTracker(trail, current_fires)
             success = tracker.create_SMS()
             if success:
                 fire_reports[trail] = tracker.text
