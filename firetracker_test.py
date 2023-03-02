@@ -4,15 +4,6 @@ from typing import *
 from firetracker import FireTracker
 import matplotlib.pyplot as plt
 
-class TestFireTracker(FireTracker):
-
-    def __init__(self, trail: str, test_fires: List[object]) -> None:
-        self.test_fires = test_fires
-        super(TestFireTracker, self).__init__(trail)
-
-    def call_fire_api(self) -> List[object]:
-        return copy.deepcopy(self.test_fires)
-
 class FireUnitTesting(unittest.TestCase):
 
     test_fire_template = {
@@ -54,7 +45,7 @@ class FireUnitTesting(unittest.TestCase):
     
     def test_mile_markers(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail, self.test_fires)
+            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
             mile_markers = list(tracker.trail_mile_markers.values())
             try:
                 self.assertTrue(mile_markers[0] < 1)
@@ -64,7 +55,7 @@ class FireUnitTesting(unittest.TestCase):
 
     def test_add_fires(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail, self.test_fires)
+            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
             tracker.plot()
             try:
                 self.assertTrue(len(tracker.close_fires) > 0)
@@ -74,7 +65,7 @@ class FireUnitTesting(unittest.TestCase):
     
     def test_fire_not_crossing_trail(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail, self.test_fires)
+            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
             try:
                 self.assertTrue(len(tracker.close_fires) > len(tracker.fires_crossing_trail))
                 print(f'{trail} test_fire_not_crossing_trail PASSED: at least one fire close but not crossing trail.')
@@ -83,7 +74,7 @@ class FireUnitTesting(unittest.TestCase):
 
     def test_fire_crossing_trail(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail, self.test_fires)
+            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
             try:
                 self.assertTrue(len(tracker.fires_crossing_trail) > 0)
                 print(f'{trail} test_fire_crossing_trail PASSED: at least one fire was crossing trail.')
@@ -92,7 +83,7 @@ class FireUnitTesting(unittest.TestCase):
     
     def test_sms(self) -> None:
         for trail in self.trails:
-            tracker = TestFireTracker(trail, self.test_fires)
+            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
             try:
                 self.assertTrue(tracker.create_SMS())
                 print(f'{trail} test_sms PASSED: sms created')

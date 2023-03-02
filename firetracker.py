@@ -9,7 +9,8 @@ from shapely.geometry import LineString, Polygon, Point, MultiPolygon
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
-    def __init__(self, trail: str) -> None:
+    def __init__(self, trail: str, current_fires: List[object]) -> None:
+        self.current_fires = current_fires
         self.text = ''
         self.trail = trail
         self.trail_list = { # 'states' includes states within 50 miles of trail
@@ -44,7 +45,7 @@ class FireTracker():
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
-        self.close_fires = self.get_close_fires(self.trail_buffer)
+        self.close_fires = self.get_close_fires(self.trail_buffer, self.current_fires)
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.close_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
     
@@ -64,12 +65,6 @@ class FireTracker():
             plt.text(centroid.y + 1, centroid.x, fire['attributes']['name'])
         plt.axis('equal')
         plt.savefig(f'{self.trail}_fires.png')
-
-    def call_fire_api(self) -> List[object]:
-        api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
-        response = requests.get(api_url)
-        data = response.json()
-        return data['features']
 
     def getdistance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         R = 3959.87433 # radius in miles
@@ -151,8 +146,7 @@ class FireTracker():
             if border.contains(p): return True
         return False
     
-    def get_close_fires(self, buffer: Polygon) -> List[object]:
-        current_fires = self.call_fire_api()
+    def get_close_fires(self, buffer: Polygon, current_fires: List[object]) -> List[object]:
         close_fires = []
         for fire in current_fires:
             fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
