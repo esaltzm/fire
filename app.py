@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import requests
 import threading
@@ -42,12 +41,22 @@ trail_names = {
     'Continental Divide Trail': 'CDT'
 }
 
-def retrieve_reports():
+def call_api():
     api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
     while True:
-        response = requests.get(api_url)
-        data = response.json()
-        current_fires = data['features']
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()
+            data = response.json()
+            return data['features']
+        except (requests.exceptions.RequestException, ValueError) as e:
+            print(f"Error retrieving data: {e}")
+            print("Retrying in 1 minute...")
+            time.sleep(60)
+
+def retrieve_reports():
+    while True:
+        current_fires = call_api()
         for trail in fire_reports.keys():
             tracker = FireTracker(trail, current_fires)
             success = tracker.create_SMS()
@@ -55,9 +64,8 @@ def retrieve_reports():
                 fire_reports[trail] = tracker.text
             else:
                 fire_reports[trail] = err_text
-        time.sleep(4 * 3600) # Retrieve new reports every 4 hours
-
-trail_pattern = re.compile('|'.join(trail_names.keys()), re.IGNORECASE)
+        FOUR_HOURS_IN_SECONDS = 4 * 60 * 60
+        time.sleep(FOUR_HOURS_IN_SECONDS) # Retrieve new reports every 4 hours
 
 @app.route('/test', methods=['GET'])
 def test():
@@ -67,10 +75,12 @@ def test():
 def sms_reply():
     resp = MessagingResponse()
     message = request.form.get('Body', '').strip()
-    match = trail_pattern.search(message)
+    match = False
+    for name in trail_names:
+        if name.lower() in message.lower():
+            match = trail_names[name]
     if match:
-        trail = match.group(0).upper()
-        resp.message(fire_reports[trail_names[trail]])
+        resp.message(fire_reports[match])
     else:
         resp.message('Sorry, we could not find a supported trail name in your message.\nPlease enter one of the following: PCT, CT, AZT, PNT, or CDT\nMore trails are forthcoming!')
     return str(resp)

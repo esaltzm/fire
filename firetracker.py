@@ -279,5 +279,6 @@ class FireTracker():
             self.text_add_fires_crossing_trail()
             return True
         except Exception as e:
-            traceback.print_tb(e.__traceback__)
+            print('SMS failed to generate')
+            traceback.print_exception(type(e), e, e.__traceback__)
             return False
