@@ -4,10 +4,8 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import gpxpy
-from geopy import distance
 from typing import *
 from shapely.geometry import LineString, Polygon, Point, MultiPolygon
-from shapely.ops import unary_union
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
@@ -147,9 +145,11 @@ class FireTracker():
             distance += current_distance
         return mile_markers
 
-    def is_in_state(self, coord: List[float], borders: List[Polygon]) -> bool:
-        p = Point(coord[1], coord[0])
-        return any(border.contains(p) for border in borders)
+    def is_in_state(self, fire: Polygon, border: Polygon) -> bool:
+        for coord in fire.exterior.coords:
+            p = Point(coord[1], coord[0])
+            if border.contains(p): return True
+        return False
     
     def get_close_fires(self, buffer: Polygon) -> List[object]:
         current_fires = self.call_fire_api()
@@ -157,17 +157,15 @@ class FireTracker():
         for fire in current_fires:
             fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
             if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
+                states = [] # catch case of multi-state fire
                 for state_border in self.state_border_polygons:
-                    #####
-                    if fire_shape.overlaps(state_border['border']):
-                        state = state_border['state']
-                    else: 
-                        state = 'non U.S.'
-                    #####
+                    if self.is_in_state(fire_shape, state_border['border']):
+                        states.append(state_border['state'])
+                if len(states) == 0: states = ['Non U.S.']
                 close_fires.append({
                     'attributes': {
                         'name': fire['attributes']['irwin_IncidentName'],
-                        'state': state,
+                        'states': states,
                         'acres': fire['attributes']['poly_GISAcres'],
                         'containment': fire['attributes']['irwin_PercentContained']
                     },
@@ -245,7 +243,8 @@ class FireTracker():
         text += f"Total fires within 50 miles of the {self.trail}: {len(self.close_fires)}\n"
         for fire in self.close_fires:
             attributes = fire['attributes']
-            text += f"{attributes['name']} Fire ({attributes['state']})"
+            states = attributes['states']
+            text += f"{attributes['name']} Fire ({states[0] if len(states) == 1 else ', '.join(states[:-1]) + ' and ' + states[-1]})"
             area = attributes['acres']
             containment = attributes['containment']
             if area or containment: text += ' - '
