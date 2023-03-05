@@ -14,9 +14,27 @@ The app does not request specific location data from the user, just the trail th
   <img src='https://i.imgur.com/OcPFsgf.jpg' alt='image showing sms update' style='width: 400px'/>
 </div>
 
-Unit testing was implemented to assess the interface using model fire perimeters for different trails:
+### Recent Improvements
+- The latest iteration of this application support more trails, including:
+  - Colorado Trail (CT)
+  - Pacific Crest Trail (PCT)
+  - Arizona Trail (AZT)
+  - Pacific Northwest Trail (PNT)
+  - Continental Divide Trail (CDT)
 
-![AZT_fires](https://user-images.githubusercontent.com/99096893/221447111-9dea5890-5cdc-480a-94b7-0c86203536b0.png)
-<img width="844" alt="arizona test fires" src="https://user-images.githubusercontent.com/99096893/221447168-dfe9cb99-5742-436c-897b-b55af893a641.png">
-![CT_fires](https://user-images.githubusercontent.com/99096893/221447126-83f77a7f-3815-4585-8f3c-6871624d0223.png)
-<img width="844" alt="colorado test fires" src="https://user-images.githubusercontent.com/99096893/221447137-902b7971-10c8-40dd-a2b2-e168dc2acef9.png">
+![CDT_fires](https://user-images.githubusercontent.com/99096893/222990819-ecde378d-f1f4-454f-9ea9-dde2bc7c5789.png)
+This image shows all supported trails, their 50 mile fire detection buffer zone, and some sample test fires to assess refactoring changes made to the app.
+
+- Unit testing was implemented to test both the new FireTracker class methods, as well as the Flask application that users interact with directly through SMS
+
+Example Colorado Trail test output with the test fires from above:
+
+        CT test_sms PASSED: sms created
+        
+        Total fires within 50 miles of the CT: 2
+        Test Fire 1 Fire (Colorado, 02/22/23) - 50 acres, 95% contained
+        Test Fire 2 Fire (Colorado and New Mexico, 02/22/23) - 50 acres, 95% contained
+        The Test Fire 1 Fire is 2 mi. from the CT at mile marker 9
+        1 fire(s) currently cross the CT
+        The Test Fire 2 Fire crosses the CT at mi. 365 to mi. 493
+
