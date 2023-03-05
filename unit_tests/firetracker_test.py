@@ -13,9 +13,10 @@ class FireUnitTesting(unittest.TestCase):
 
     test_fire_template = {
         'attributes': {
-            'poly_GISAcres': 50,
-            'irwin_IncidentName': 'Test Fire',
-            'irwin_PercentContained': 95,
+            'attr_IncidentSize': 50,
+            'poly_IncidentName': 'Test Fire',
+            'attr_PercentContained': 95,
+            'attr_FireDiscoveryDateTime': 1677106499000
         },
         'geometry': {
             'rings': None
@@ -45,7 +46,7 @@ class FireUnitTesting(unittest.TestCase):
     for i, coords in enumerate(test_fire_coords):
         fire = copy.deepcopy(test_fire_template)
         fire['geometry']['rings'] = coords
-        fire['attributes']['irwin_IncidentName'] += f' {i + 1}'
+        fire['attributes']['poly_IncidentName'] += f' {i + 1}'
         test_fires.append(fire)
     
     def test_mile_markers(self) -> None:

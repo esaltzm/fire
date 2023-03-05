@@ -1,4 +1,3 @@
-import os
 import time
 import requests
 import threading
@@ -7,17 +6,9 @@ from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
-# if os.environ.get('FLASK_DEBUG'):
-#     DEBUG = True
-#     DEVELOPMENT = True
-#     LISTEN_ADDRESS = '127.0.0.1'
-#     LISTEN_PORT = 8080
-# else:
-#     DEBUG = False
-#     TESTING = False
-#     LISTEN_ADDRESS = '209.94.59.175'
-#     LISTEN_PORT = 5001
 
+# LISTEN_ADDRESS = '209.94.59.175'
+# LISTEN_PORT = 5000
 LISTEN_ADDRESS = '0.0.0.0'
 LISTEN_PORT = 8080
 
@@ -45,17 +36,17 @@ trail_names = {
 }
 
 def call_api():
-    api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
+    api_url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=json'
     while True:
         try:
             response = requests.get(api_url)
             response.raise_for_status()
             data = response.json()
             return data['features']
-        except (requests.exceptions.RequestException, ValueError) as e:
+        except (requests.exceptions.RequestException, ValueError, KeyError) as e:
             print(f"Error retrieving data: {e}")
-            print("Retrying in 1 minute...")
-            time.sleep(60)
+            print("Retrying in 1 hour...")
+            time.sleep(60 * 60)
 
 def retrieve_reports():
     while True:
@@ -65,6 +56,7 @@ def retrieve_reports():
             success = tracker.create_SMS()
             if success:
                 fire_reports[trail] = tracker.text
+                print(f'{trail} generated')
             else:
                 fire_reports[trail] = err_text
         FOUR_HOURS_IN_SECONDS = 4 * 60 * 60

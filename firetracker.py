@@ -1,4 +1,4 @@
-import requests
+import datetime
 import traceback
 import matplotlib.pyplot as plt
 import geopandas as gpd
@@ -150,21 +150,22 @@ class FireTracker():
         close_fires = []
         for fire in current_fires:
             fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
-            if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
-                states = [] # catch case of multi-state fire
-                for state_border in self.state_border_polygons:
-                    if self.is_in_state(fire_shape, state_border['border']):
-                        states.append(state_border['state'])
-                if len(states) == 0: states = ['Non U.S.']
-                close_fires.append({
-                    'attributes': {
-                        'name': fire['attributes']['irwin_IncidentName'],
-                        'states': states,
-                        'acres': fire['attributes']['poly_GISAcres'],
-                        'containment': fire['attributes']['irwin_PercentContained']
-                    },
-                    'shape': fire_shape
-                })
+            # if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
+            states = [] # catch case of multi-state fire
+            for state_border in self.state_border_polygons:
+                if self.is_in_state(fire_shape, state_border['border']):
+                    states.append(state_border['state'])
+            if len(states) == 0: states = ['Non U.S.']
+            close_fires.append({
+                'attributes': {
+                    'name': fire['attributes']['poly_IncidentName'],
+                    'date': datetime.datetime.fromtimestamp(fire['attributes']['attr_FireDiscoveryDateTime'] / 1000).strftime("%m/%d/%y"),
+                    'states': states,
+                    'acres': fire['attributes']['attr_IncidentSize'],
+                    'containment': fire['attributes']['attr_PercentContained']
+                },
+                'shape': fire_shape
+            })
         return close_fires
 
     def switch_xy(self, points: List[List[float]]) -> List[List[float]]:
@@ -238,7 +239,7 @@ class FireTracker():
         for fire in self.close_fires:
             attributes = fire['attributes']
             states = attributes['states']
-            text += f"{attributes['name']} Fire ({states[0] if len(states) == 1 else ', '.join(states[:-1]) + ' and ' + states[-1]})"
+            text += f"{attributes['name']} Fire ({states[0] if len(states) == 1 else ', '.join(states[:-1]) + ' and ' + states[-1]}, {attributes['date']})"
             area = attributes['acres']
             containment = attributes['containment']
             if area or containment: text += ' - '

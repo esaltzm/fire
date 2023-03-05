@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import requests
 import pytest
 
 app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
