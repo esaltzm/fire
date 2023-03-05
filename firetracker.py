@@ -127,7 +127,7 @@ class FireTracker():
                 for segment in track.segments:
                     for point in segment.points:
                         coords.insert(0, (point.latitude, point.longitude))
-            if self.trail in ['AZT', 'PNT', 'PCT', 'CT']: coords.reverse()
+            if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
             return LineString(coords)
 
     def get_trail_buffer(self, trail: LineString) -> Polygon:
