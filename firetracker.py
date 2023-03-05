@@ -1,5 +1,6 @@
 import datetime
 import traceback
+import fiona
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -46,6 +47,8 @@ class FireTracker():
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
         self.close_fires = self.get_close_fires(self.trail_buffer, self.current_fires)
+        del self.state_border_polygons
+        del self.trail_buffer
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.close_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
     
@@ -101,12 +104,13 @@ class FireTracker():
 
     # Retrieve state border data as a Shapely polygon
     def get_border(self, state: str) -> object:
-        borders = gpd.read_file('./state_borders/tl_2022_us_state.shp')
-        borders = borders.to_crs(epsg=4326)
-        borders = borders[['NAME', 'geometry']]
-        borders = borders.set_index('NAME')
-        state_border = borders.loc[state]
-        polygon = state_border.geometry
+        with fiona.Env():
+            borders = gpd.read_file('./state_borders/tl_2022_us_state.shp')
+            borders = borders.to_crs(epsg=4326)
+            borders = borders[['NAME', 'geometry']]
+            borders = borders.set_index('NAME')
+            state_border = borders.loc[state]
+            polygon = state_border.geometry
         if isinstance(polygon, MultiPolygon):
             polygon = self.get_largest_polygon(polygon.geoms)
         return {
@@ -118,13 +122,13 @@ class FireTracker():
     def get_trail_linestring(self, filename: str) -> LineString:
         with open(filename, 'r') as gpx_file:
             gpx = gpxpy.parse(gpx_file)
-        coords = []
-        for track in gpx.tracks:
-            for segment in track.segments:
-                for point in segment.points:
-                    coords.insert(0, (point.latitude, point.longitude))
-        if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
-        return LineString(coords)
+            coords = []
+            for track in gpx.tracks:
+                for segment in track.segments:
+                    for point in segment.points:
+                        coords.insert(0, (point.latitude, point.longitude))
+            if self.trail in ['AZT', 'PNT', 'PCT', 'CT']: coords.reverse()
+            return LineString(coords)
 
     def get_trail_buffer(self, trail: LineString) -> Polygon:
         return trail.buffer(50/69) # Approximate degrees per 50 mile radius
@@ -150,22 +154,22 @@ class FireTracker():
         close_fires = []
         for fire in current_fires:
             fire_shape = Polygon(self.switch_xy(fire['geometry']['rings'][0]))
-            # if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
-            states = [] # catch case of multi-state fire
-            for state_border in self.state_border_polygons:
-                if self.is_in_state(fire_shape, state_border['border']):
-                    states.append(state_border['state'])
-            if len(states) == 0: states = ['Non U.S.']
-            close_fires.append({
-                'attributes': {
-                    'name': fire['attributes']['poly_IncidentName'],
-                    'date': datetime.datetime.fromtimestamp(fire['attributes']['attr_FireDiscoveryDateTime'] / 1000).strftime("%m/%d/%y"),
-                    'states': states,
-                    'acres': fire['attributes']['attr_IncidentSize'],
-                    'containment': fire['attributes']['attr_PercentContained']
-                },
-                'shape': fire_shape
-            })
+            if fire_shape.overlaps(buffer) or fire_shape.intersects(buffer):
+                states = [] # catch case of multi-state fire
+                for state_border in self.state_border_polygons:
+                    if self.is_in_state(fire_shape, state_border['border']):
+                        states.append(state_border['state'])
+                if len(states) == 0: states = ['Non U.S.']
+                close_fires.append({
+                    'attributes': {
+                        'name': fire['attributes']['poly_IncidentName'],
+                        'date': datetime.datetime.fromtimestamp(fire['attributes']['attr_FireDiscoveryDateTime'] / 1000).strftime("%m/%d/%y"),
+                        'states': states,
+                        'acres': fire['attributes']['attr_IncidentSize'],
+                        'containment': fire['attributes']['attr_PercentContained']
+                    },
+                    'shape': fire_shape
+                })
         return close_fires
 
     def switch_xy(self, points: List[List[float]]) -> List[List[float]]:

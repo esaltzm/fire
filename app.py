@@ -4,13 +4,16 @@ import threading
 from firetracker import FireTracker
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
+from datetime import datetime, timedelta
+from pytz import timezone
 
 app = Flask(__name__)
 
-# LISTEN_ADDRESS = '209.94.59.175'
-# LISTEN_PORT = 5000
-LISTEN_ADDRESS = '0.0.0.0'
-LISTEN_PORT = 8080
+LISTEN_ADDRESS = '209.94.59.175'
+LISTEN_PORT = 5000
+# LISTEN_ADDRESS = '0.0.0.0'
+# LISTEN_PORT = 8080
+
 
 err_text = 'Sorry, an error occurred while generating the fire report.\nPlease try again later.'
 
@@ -50,6 +53,11 @@ def call_api():
 
 def retrieve_reports():
     while True:
+        current_time = datetime.now(timezone('US/Eastern'))
+        target_time = current_time.replace(hour=3, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        time_diff = (target_time - current_time).total_seconds()
+        print(current_time.timestamp(), time_diff)
+        time.sleep(time_diff)
         current_fires = call_api()
         for trail in fire_reports.keys():
             tracker = FireTracker(trail, current_fires)
@@ -59,8 +67,7 @@ def retrieve_reports():
                 print(f'{trail} generated')
             else:
                 fire_reports[trail] = err_text
-        FOUR_HOURS_IN_SECONDS = 4 * 60 * 60
-        time.sleep(FOUR_HOURS_IN_SECONDS) # Retrieve new reports every 4 hours
+            del tracker
 
 @app.route('/test', methods=['GET'])
 def test():
