@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import gpxpy
 from typing import *
 from shapely.geometry import LineString, Polygon, Point, MultiPolygon
+from shapely.wkt import loads
 from math import radians, cos, sin, asin, sqrt
             
 class FireTracker():
@@ -18,37 +19,30 @@ class FireTracker():
             'CT': {
                 'name': 'Colorado Trail',
                 'states': ['Colorado', 'New Mexico'],
-                'data': 'gpx_files/Colorado_Trail.gpx'
             },
             'PCT': {
                 'name': 'Pacific Crest Trail',
                 'states': ['California', 'Nevada', 'Oregon', 'Washington'],
-                'data': 'gpx_files/Pacific_Crest_Trail.gpx'
             },
             'CDT': {
                 'name': 'Continental Divide Trail',
                 'states': ['Arizona', 'New Mexico', 'Colorado', 'Wyoming', 'Idaho', 'Montana'],
-                'data': 'gpx_files/Continental_Divide_Trail.gpx'
             },
             'PNT': {
                 'name': 'Pacific Northwest Trail',
                 'states': ['Montana', 'Idaho', 'Washington'],
-                'data': 'gpx_files/Pacific_Northwest_Trail.gpx'
             },
             'AZT': {
                 'name': 'Arizona Trail',
                 'states': ['Arizona', 'Utah'],
-                'data': 'gpx_files/Arizona_Trail.gpx'
             }
         }
-        self.trail_linestring = self.get_trail_linestring(self.trail_list[trail]['data'])
+        self.trail_linestring = self.get_trail_linestring()
         self.trail_buffer = self.get_trail_buffer(self.trail_linestring)
         self.trail_mile_markers = self.get_mile_markers(self.trail_linestring)
         self.states = self.trail_list[trail]['states']
         self.state_border_polygons = [self.get_border(state) for state in self.states]
         self.close_fires = self.get_close_fires(self.trail_buffer, self.current_fires)
-        del self.state_border_polygons
-        del self.trail_buffer
         self.fires_crossing_trail = self.get_fires_crossing_trail(self.trail_linestring, self.close_fires)
         self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
     
@@ -104,34 +98,26 @@ class FireTracker():
 
     # Retrieve state border data as a Shapely polygon
     def get_border(self, state: str) -> object:
-        with fiona.Env():
-            borders = gpd.read_file('./state_borders/tl_2022_us_state.shp')
-            borders = borders.to_crs(epsg=4326)
-            borders = borders[['NAME', 'geometry']]
-            borders = borders.set_index('NAME')
-            state_border = borders.loc[state]
-            polygon = state_border.geometry
-        if isinstance(polygon, MultiPolygon):
-            polygon = self.get_largest_polygon(polygon.geoms)
+        with open(f'./state_wkt_files/{state.lower().replace(" ", "_")}.wkt', 'r') as wkt_file:
+            wkt_string = wkt_file.read()
+        polygon = loads(wkt_string)
         return {
             'state': state,
             'border': polygon
         }
 
     # Convert trail data to Shapely linestring
-    def get_trail_linestring(self, filename: str) -> LineString:
-        with open(filename, 'r') as gpx_file:
-            gpx = gpxpy.parse(gpx_file)
-            coords = []
-            for track in gpx.tracks:
-                for segment in track.segments:
-                    for point in segment.points:
-                        coords.insert(0, (point.latitude, point.longitude))
-            if self.trail in ['AZT', 'PNT', 'PCT']: coords.reverse()
-            return LineString(coords)
+    def get_trail_linestring(self) -> LineString:
+        with open(f'./trail_wkt_files/{self.trail}.wkt', 'r') as wkt_file:
+            wkt_string = wkt_file.read()
+        linestring = loads(wkt_string)
+        return linestring
 
     def get_trail_buffer(self, trail: LineString) -> Polygon:
-        return trail.buffer(50/69) # Approximate degrees per 50 mile radius
+        with open(f'./trail_wkt_files/{self.trail}_buffer.wkt', 'r') as wkt_file:
+            wkt_string = wkt_file.read()
+        polygon = loads(wkt_string)
+        return polygon
     
     # Create mile markers for each point in CT in the format dictionary[coordinate pair] = mile marker
     def get_mile_markers(self, trail: LineString) -> dict:

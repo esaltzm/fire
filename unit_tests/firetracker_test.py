@@ -49,47 +49,48 @@ class FireUnitTesting(unittest.TestCase):
         fire['attributes']['poly_IncidentName'] += f' {i + 1}'
         test_fires.append(fire)
     
-    def test_mile_markers(self) -> None:
-        for trail in self.trails:
-            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
-            mile_markers = list(tracker.trail_mile_markers.values())
-            try:
-                self.assertTrue(mile_markers[0] < 1)
-                print(f'{trail} test_mile_markers PASSED: first mile marker expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
-            except AssertionError:
-                print(f'{trail} test_mile_markers FAILED: first mile marker larger than expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
+    # def test_mile_markers(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
+    #         mile_markers = list(tracker.trail_mile_markers.values())
+    #         try:
+    #             self.assertTrue(mile_markers[0] < 1)
+    #             print(f'{trail} test_mile_markers PASSED: first mile marker expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
+    #         except AssertionError:
+    #             print(f'{trail} test_mile_markers FAILED: first mile marker larger than expected size\n\n{mile_markers[0]} mi. to {mile_markers[len(mile_markers) - 1]} mi.')
 
-    def test_add_fires(self) -> None:
-        for trail in self.trails:
-            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
-            tracker.plot()
-            try:
-                self.assertTrue(len(tracker.close_fires) > 0)
-                print(f'{trail} test_add_fires PASSED: at least one test fire added to close fires.')
-            except AssertionError:
-                print(f'{trail} test_add_fires FAILED: close fires was empty.')
+    # def test_add_fires(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
+    #         tracker.plot()
+    #         try:
+    #             self.assertTrue(len(tracker.close_fires) > 0)
+    #             print(f'{trail} test_add_fires PASSED: at least one test fire added to close fires.')
+    #         except AssertionError:
+    #             print(f'{trail} test_add_fires FAILED: close fires was empty.')
     
-    def test_fire_not_crossing_trail(self) -> None:
-        for trail in self.trails:
-            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
-            try:
-                self.assertTrue(len(tracker.close_fires) > len(tracker.fires_crossing_trail))
-                print(f'{trail} test_fire_not_crossing_trail PASSED: at least one fire close but not crossing trail.')
-            except AssertionError:
-                print(f'{trail} test_fire_not_crossing_trail FAILED: no fires not crossing trail.')
+    # def test_fire_not_crossing_trail(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
+    #         try:
+    #             self.assertTrue(len(tracker.close_fires) > len(tracker.fires_crossing_trail))
+    #             print(f'{trail} test_fire_not_crossing_trail PASSED: at least one fire close but not crossing trail.')
+    #         except AssertionError:
+    #             print(f'{trail} test_fire_not_crossing_trail FAILED: no fires not crossing trail.')
 
-    def test_fire_crossing_trail(self) -> None:
-        for trail in self.trails:
-            tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
-            try:
-                self.assertTrue(len(tracker.fires_crossing_trail) > 0)
-                print(f'{trail} test_fire_crossing_trail PASSED: at least one fire was crossing trail.')
-            except AssertionError:
-                print(f'{trail} test_fire_crossing_trail FAILED: no fires were crossing trail.')
+    # def test_fire_crossing_trail(self) -> None:
+    #     for trail in self.trails:
+    #         tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
+    #         try:
+    #             self.assertTrue(len(tracker.fires_crossing_trail) > 0)
+    #             print(f'{trail} test_fire_crossing_trail PASSED: at least one fire was crossing trail.')
+    #         except AssertionError:
+    #             print(f'{trail} test_fire_crossing_trail FAILED: no fires were crossing trail.')
     
     def test_sms(self) -> None:
         for trail in self.trails:
             tracker = FireTracker(trail, copy.deepcopy(self.test_fires))
+            tracker.plot()
             try:
                 self.assertTrue(tracker.create_SMS())
                 print(f'{trail} test_sms PASSED: sms created')

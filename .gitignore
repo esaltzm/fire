@@ -1,5 +1,7 @@
 state_borders/
 gpx_files/
+trail_wkt_files/
+state_wkt_files/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

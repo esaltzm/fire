@@ -53,11 +53,6 @@ def call_api():
 
 def retrieve_reports():
     while True:
-        current_time = datetime.now(timezone('US/Eastern'))
-        target_time = current_time.replace(hour=3, minute=0, second=0, microsecond=0) + timedelta(days=1)
-        time_diff = (target_time - current_time).total_seconds()
-        print(current_time.timestamp(), time_diff)
-        time.sleep(time_diff)
         current_fires = call_api()
         for trail in fire_reports.keys():
             tracker = FireTracker(trail, current_fires)
@@ -68,6 +63,7 @@ def retrieve_reports():
             else:
                 fire_reports[trail] = err_text
             del tracker
+        time.sleep(60 * 60) # wait one hour before retrieving new reports
 
 @app.route('/test', methods=['GET'])
 def test():
