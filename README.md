@@ -24,7 +24,13 @@ The app does not request specific location data from the user, just the trail th
 
 ![CDT_fires](https://user-images.githubusercontent.com/99096893/222990819-ecde378d-f1f4-454f-9ea9-dde2bc7c5789.png)
 This image shows all supported trails, their 50 mile fire detection buffer zone, and some sample test fires to assess refactoring changes made to the app.
-
+<div style='display: flex; gap: 30px;'>
+  <img src='https://user-images.githubusercontent.com/99096893/223204368-f9c04da4-8d72-4bb3-89d9-41ba6f8b59fa.png' alt='image showing sms update' style='width: 400px'/>
+  <img src='https://user-images.githubusercontent.com/99096893/223204386-e098f537-9d7f-4aeb-825b-61b0eb186ca6.png' alt='image showing sms update' style='width: 400px'/>
+  <img src='https://user-images.githubusercontent.com/99096893/223204408-892dc7ef-affa-42e6-a690-a245846de203.png' alt='image showing sms update' style='width: 400px'/>
+  <img src='https://user-images.githubusercontent.com/99096893/223204399-9b5e83c9-3acf-4382-a93c-bc6e6f7f6324.png' alt='image showing sms update' style='width: 400px'/>
+  <img src='https://user-images.githubusercontent.com/99096893/223204420-f7930acf-1e9b-4d71-81d3-1eaa103aa9a9.png' alt='image showing sms update' style='width: 400px'/>
+</div>
 - Unit testing was implemented to test both the new FireTracker class methods, as well as the Flask application that users interact with directly through SMS
 
 Example Colorado Trail test output with the test fires from above:
@@ -37,4 +43,6 @@ Example Colorado Trail test output with the test fires from above:
         The Test Fire 1 Fire is 2 mi. from the CT at mile marker 9
         1 fire(s) currently cross the CT
         The Test Fire 2 Fire crosses the CT at mi. 365 to mi. 493
+        
+    
 
