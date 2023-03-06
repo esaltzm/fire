@@ -47,7 +47,7 @@ class FireTracker():
         self.closest_points = self.get_closest_points(self.trail_linestring, self.close_fires)
     
     def plot(self) -> None:
-        # plt.clf()
+        plt.clf()
         for border in self.state_border_polygons:
             x, y = border['border'].exterior.xy
             plt.plot(x, y, color='grey')
